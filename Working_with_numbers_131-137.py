@@ -44,3 +44,4 @@ print(round(num4))
 
 #To write square root in Python use the fuction sqrt()
 print(sqrt(9))
+print(sqrt(num2))
