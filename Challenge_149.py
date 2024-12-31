@@ -18,8 +18,6 @@ pete.left(125)
 pete.forward(100)
 pete.left(90)
 pete.forward(100)
-
-
 turtle.done()
 
 
