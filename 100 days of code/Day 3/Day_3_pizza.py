@@ -12,10 +12,7 @@ elif size=="L":
 if peponi=="Y":
     if size=="S":
         bill=bill+2
-if size=="M":
-    if peponi=="Y":
-        bill=bill+3
-if size=="L":
+if size=="M"or"L":
     if peponi=="Y":
         bill=bill+3
 if extra_cheese=="Y":
