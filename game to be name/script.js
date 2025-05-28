@@ -14,6 +14,27 @@ const cooldowns = {
 let p1Char = null, p2Char = null, aiChar = null;
 let aiDifficulty = "medium";
 let aiEnabled = true;
+let gameMode = "versus"; // Default mode
+
+// Listen for mode select changes
+document.getElementById("game-mode").addEventListener("change", (e) => {
+  gameMode = e.target.value;
+  if (gameMode === "coop") {
+    document.getElementById("ai-toggle").checked = true;
+    document.getElementById("ai-toggle").disabled = true;
+    aiEnabled = true;
+    document.getElementById("ai-characters").style.display = "flex";
+    document.getElementById("ai-difficulty").disabled = false;
+    document.getElementById("ai-health").style.display = "block";
+  } else if (gameMode === "versus") {
+    document.getElementById("ai-toggle").disabled = false;
+  } else if (gameMode === "online") {
+    alert("Online mode is in development. Please use local multiplayer for now!");
+    document.getElementById("game-mode").value = "versus";
+    gameMode = "versus";
+  }
+  validateStart();
+});
 
 document.getElementById("ai-difficulty").addEventListener("change", e => {
   aiDifficulty = e.target.value;
@@ -66,7 +87,7 @@ function selectAICharacter(char, imgElement) {
 }
 
 function validateStart() {
-  if (aiEnabled) {
+  if ((aiEnabled || gameMode === "coop")) {
     document.getElementById("start-game").disabled = !(p1Char && p2Char && aiChar);
   } else {
     document.getElementById("start-game").disabled = !(p1Char && p2Char);
@@ -91,20 +112,18 @@ document.getElementById("start-game").addEventListener("click", () => {
 });
 
 function startGame() {
-  // Always hide the game-over message when a new round starts
   document.getElementById("game-over").style.display = "none";
 
   p1Img.src = `images/${p1Char}.png`;
   p2Img.src = `images/${p2Char}.png`;
-  if (aiEnabled && aiChar) aiImg.src = `images/${aiChar}.png`;
+  if ((aiEnabled || gameMode === "coop") && aiChar) aiImg.src = `images/${aiChar}.png`;
 
-  p1 = { x: 100, y: 300, health: 1000, vy: 0 };
-  p2 = { x: 600, y: 300, health: 1000, vy: 0 };
-  ai = { x: 350, y: 300, health: 1000, vy: 0 };
+  p1 = { x: 100, y: 300, health: 1000, vy: 0, facing: "right" };
+  p2 = { x: 600, y: 300, health: 1000, vy: 0, facing: "left" };
+  ai = { x: 350, y: 300, health: 1000, vy: 0, facing: "left" };
   projectiles = [];
   gameEnded = false;
 
-  // Make sure to get the canvas after it's visible!
   canvas = document.getElementById("gameCanvas");
   ctx = canvas.getContext("2d");
 
@@ -115,12 +134,11 @@ function gameLoop() {
   if (gameEnded) return;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // Player movement
   movePlayer(p1, ["a", "d", "w"]);
   movePlayer(p2, ["ArrowLeft", "ArrowRight", "ArrowUp"]);
   applyGravity(p1);
   applyGravity(p2);
-  if (aiEnabled) {
+  if (aiEnabled || gameMode === "coop") {
     handleAI(ai, p1, performance.now());
     applyGravity(ai);
   }
@@ -139,34 +157,49 @@ function gameLoop() {
 
   ctx.drawImage(p1Img, p1.x, p1.y, 100, 100);
   ctx.drawImage(p2Img, p2.x, p2.y, 100, 100);
-  if (aiEnabled) ctx.drawImage(aiImg, ai.x, ai.y, 100, 100);
+  if ((aiEnabled || gameMode === "coop")) ctx.drawImage(aiImg, ai.x, ai.y, 100, 100);
 
-  // Health displays
   document.getElementById("p1-health").textContent = `Player 1: ${p1.health}`;
   document.getElementById("p2-health").textContent = `Player 2: ${p2.health}`;
-  document.getElementById("ai-health").textContent = aiEnabled ? `AI: ${ai.health}` : "";
+  document.getElementById("ai-health").textContent = (aiEnabled || gameMode === "coop") ? `AI: ${ai.health}` : "";
 
-  // --------- Fixed winner logic below ----------
-  // Gather alive fighters
-  const alive = [];
-  if (p1.health > 0) alive.push("Player 1");
-  if (p2.health > 0) alive.push("Player 2");
-  if (aiEnabled && ai.health > 0) alive.push("AI");
-
-  // Only 1 left standing? Show game over!
-  if (alive.length === 1) {
-    showGameOver(alive[0]);
-    return;
+  // --------- Mode-dependent winner logic below ----------
+  if (gameMode === "versus") {
+    const alive = [];
+    if (p1.health > 0) alive.push("Player 1");
+    if (p2.health > 0) alive.push("Player 2");
+    if ((aiEnabled || gameMode === "coop") && ai.health > 0) alive.push("AI");
+    if (alive.length === 1) {
+      showGameOver(alive[0]);
+      return;
+    }
+  } else if (gameMode === "coop") {
+    // Co-op: win if AI dies, lose if both players die
+    if ((aiEnabled || gameMode === "coop") && ai.health <= 0) {
+      showGameOver("win");
+      return;
+    }
+    if (p1.health <= 0 && p2.health <= 0) {
+      showGameOver("lose");
+      return;
+    }
   }
 
   requestAnimationFrame(gameLoop);
 }
 
 function movePlayer(player, keysList) {
-  if (keys[keysList[0]]) player.x -= 5;
-  if (keys[keysList[1]]) player.x += 5;
+  if (keys[keysList[0]]) {
+    player.x -= 5;
+    player.facing = "left";
+  }
+  if (keys[keysList[1]]) {
+    player.x += 5;
+    player.facing = "right";
+  }
   if (keys[keysList[2]] && player.y === groundY) player.vy = -15;
 }
+
 function applyGravity(player) {
   player.vy += gravity;
   player.y += player.vy;
@@ -176,47 +209,115 @@ function applyGravity(player) {
   }
 }
 
+// ========== SMART AI FOR GUN CHARACTERS =============
 function handleAI(ai, target, now) {
-  if (!aiEnabled) return;
+  if (!(aiEnabled || gameMode === "coop")) return;
   const dist = target.x - ai.x;
   const jump = Math.random();
+  const aiType = getAttackType(aiChar);
 
-  switch (aiDifficulty) {
-    case "easy":
-      if (Math.random() < 0.01) ai.x += dist > 0 ? 2 : -2;
-      if (jump < 0.005 && ai.y === groundY) ai.vy = -10;
-      if (Math.random() < 0.01 && now - aiLastAttack >= cooldowns[aiChar]) {
-        performAttack(ai, aiChar, 3);
-        aiLastAttack = now;
-      }
-      break;
-    case "medium":
-      ai.x += dist > 0 ? 2 : -2;
-      if (jump < 0.01 && ai.y === groundY) ai.vy = -12;
-      if (Math.abs(dist) < 150 && now - aiLastAttack >= cooldowns[aiChar]) {
-        performAttack(ai, aiChar, 3);
-        aiLastAttack = now;
-      }
-      break;
-    case "hard":
-      ai.x += dist > 0 ? 3 : -3;
-      if (jump < 0.02 && ai.y === groundY) ai.vy = -14;
-      if (Math.abs(dist) < 200 && now - aiLastAttack >= cooldowns[aiChar] && Math.random() < 0.9) {
-        performAttack(ai, aiChar, 3);
-        aiLastAttack = now;
-      }
-      break;
+  if (aiType === "gun") {
+    const idealMin = 250, idealMax = 400;
+    if (Math.abs(dist) < idealMin) {
+      ai.x -= Math.sign(dist) * 3;
+      ai.facing = dist < 0 ? "left" : "right";
+    } else if (Math.abs(dist) > idealMax) {
+      ai.x += Math.sign(dist) * 2;
+      ai.facing = dist > 0 ? "right" : "left";
+    } else {
+      ai.facing = dist > 0 ? "right" : "left";
+    }
+    if (jump < 0.01 && ai.y === groundY) ai.vy = -12;
+    if (
+      Math.abs(dist) > idealMin && Math.abs(dist) < idealMax &&
+      now - aiLastAttack >= cooldowns[aiChar]
+    ) {
+      performAttack(ai, aiChar, 3);
+      aiLastAttack = now;
+    }
+  } else {
+    // Sword/fist AI (original difficulty logic)
+    switch (aiDifficulty) {
+      case "easy":
+        if (Math.random() < 0.01) {
+          ai.x += dist > 0 ? 2 : -2;
+          ai.facing = dist > 0 ? "right" : "left";
+        }
+        if (jump < 0.005 && ai.y === groundY) ai.vy = -10;
+        if (Math.random() < 0.01 && now - aiLastAttack >= cooldowns[aiChar]) {
+          performAttack(ai, aiChar, 3);
+          aiLastAttack = now;
+        }
+        break;
+      case "medium":
+        ai.x += dist > 0 ? 2 : -2;
+        ai.facing = dist > 0 ? "right" : "left";
+        if (jump < 0.01 && ai.y === groundY) ai.vy = -12;
+        if (Math.abs(dist) < 150 && now - aiLastAttack >= cooldowns[aiChar]) {
+          performAttack(ai, aiChar, 3);
+          aiLastAttack = now;
+        }
+        break;
+      case "hard":
+        ai.x += dist > 0 ? 3 : -3;
+        ai.facing = dist > 0 ? "right" : "left";
+        if (jump < 0.02 && ai.y === groundY) ai.vy = -14;
+        if (Math.abs(dist) < 200 && now - aiLastAttack >= cooldowns[aiChar] && Math.random() < 0.9) {
+          performAttack(ai, aiChar, 3);
+          aiLastAttack = now;
+        }
+        break;
+    }
   }
 }
 
+// === MAIN CHANGE: Players can't hurt each other in co-op ===
+function performAttack(player, character, owner) {
+  const type = getAttackType(character);
+  let targets;
+  if (gameMode === "coop") {
+    if (owner === 1 || owner === 2) {
+      targets = [ai]; // Only attack AI
+    } else if (owner === 3) {
+      targets = [];
+      if (p1.health > 0) targets.push(p1);
+      if (p2.health > 0) targets.push(p2);
+    }
+  } else {
+    targets = [p1, p2];
+    if (aiEnabled || gameMode === "coop") targets.push(ai);
+    targets = targets.filter((_, idx) => (idx + 1) !== owner);
+  }
+
+  if (type === "gun") {
+    shootProjectile(player, character, owner);
+  } else {
+    targets.forEach(target => performMeleeAttack(player, target, type));
+  }
+}
+
+// === MAIN CHANGE: Projectiles can't hurt other player in co-op ===
 function moveProjectiles() {
   projectiles.forEach(p => p.x += p.vx);
   projectiles = projectiles.filter(p => {
-    const targets = [p1, p2];
-    if (aiEnabled) targets.push(ai);
+    let targets;
+    if (gameMode === "coop") {
+      if (p.owner === 1 || p.owner === 2) {
+        targets = [ai];
+      } else if (p.owner === 3) {
+        targets = [];
+        if (p1.health > 0) targets.push(p1);
+        if (p2.health > 0) targets.push(p2);
+      }
+    } else {
+      targets = [p1, p2];
+      if (aiEnabled || gameMode === "coop") targets.push(ai);
+      targets = targets.filter((_, idx) => (idx + 1) !== p.owner);
+    }
+
     let hit = false;
     for (let i = 0; i < targets.length; i++) {
-      if ((i + 1) !== p.owner && checkCollision(p, targets[i])) {
+      if (checkCollision(p, targets[i])) {
         targets[i].health -= p.damage;
         hit = true;
         break;
@@ -232,18 +333,6 @@ function moveProjectiles() {
   });
 }
 
-function performAttack(player, character, owner) {
-  const type = getAttackType(character);
-  const targets = [p1, p2];
-  if (aiEnabled) targets.push(ai);
-  if (type === "gun") {
-    shootProjectile(player, character, owner);
-  } else {
-    targets.forEach((target, idx) => {
-      if ((idx + 1) !== owner) performMeleeAttack(player, target, type);
-    });
-  }
-}
 function performMeleeAttack(attacker, target, type) {
   const range = 100;
   const damage = type === "sword" ? 30 : 20;
@@ -254,12 +343,27 @@ function performMeleeAttack(attacker, target, type) {
   );
   if (inRange) target.health -= damage;
 }
+
+// === PROJECTILE FACES DIRECTION ===
 function shootProjectile(player, char, owner) {
   const { color, size, speed, damage } = getCharacterProjectile(char);
-  const x = player.x + (owner === 1 ? 100 : 0);
-  const vx = owner === 1 ? speed : -speed;
+
+  let vx;
+  if (owner === 1) {
+    vx = player.facing === "right" ? speed : -speed;
+  } else if (owner === 2) {
+    vx = player.facing === "right" ? speed : -speed;
+  } else if (owner === 3) {
+    vx = player.facing === "right" ? speed : -speed;
+  } else {
+    vx = speed; // fallback, should not be used
+  }
+
+  // Spawn projectile at the "front" of the player based on facing
+  const x = player.x + (player.facing === "right" ? 100 : 0);
   projectiles.push({ x, y: player.y + 50, vx, size, color, damage, owner });
 }
+
 function getCharacterProjectile(char) {
   switch (char) {
     case "sans": return { color: "white", size: 4, speed: 10, damage: 15 };
@@ -285,13 +389,23 @@ function checkCollision(proj, target) {
 function showGameOver(winner) {
   gameEnded = true;
   const gameOverText = document.getElementById("game-over");
-  gameOverText.textContent = `${winner} wins!`;
+  if (gameMode === "coop") {
+    if (winner === "win") {
+      gameOverText.textContent = "You win!";
+    } else if (winner === "lose") {
+      gameOverText.textContent = "You lose!";
+    }
+  } else if (winner === "Players (Co-op)") {
+    gameOverText.textContent = `Players win (Co-op)!`;
+  } else {
+    gameOverText.textContent = `${winner} wins!`;
+  }
   gameOverText.style.display = "block";
   setTimeout(() => {
-    gameOverText.style.display = "none"; // <-- Hide after next round!
-    p1 = { x: 100, y: 300, health: 1000, vy: 0 };
-    p2 = { x: 600, y: 300, health: 1000, vy: 0 };
-    if (aiEnabled) ai = { x: 350, y: 300, health: 1000, vy: 0 };
+    gameOverText.style.display = "none";
+    p1 = { x: 100, y: 300, health: 1000, vy: 0, facing: "right" };
+    p2 = { x: 600, y: 300, health: 1000, vy: 0, facing: "left" };
+    if (aiEnabled || gameMode === "coop") ai = { x: 350, y: 300, health: 1000, vy: 0, facing: "left" };
     keys = {};
     projectiles = [];
     startGame();
