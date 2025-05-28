@@ -76,7 +76,6 @@ function validateStart() {
 // ----------------- GAME LOGIC BELOW -----------------
 
 let canvas = null, ctx = null;
-
 let p1, p2, ai, keys = {}, projectiles = [];
 const groundY = 300, gravity = 1;
 const p1Img = new Image(), p2Img = new Image(), aiImg = new Image();
@@ -92,6 +91,9 @@ document.getElementById("start-game").addEventListener("click", () => {
 });
 
 function startGame() {
+  // Always hide the game-over message when a new round starts
+  document.getElementById("game-over").style.display = "none";
+
   p1Img.src = `images/${p1Char}.png`;
   p2Img.src = `images/${p2Char}.png`;
   if (aiEnabled && aiChar) aiImg.src = `images/${aiChar}.png`;
@@ -101,12 +103,10 @@ function startGame() {
   ai = { x: 350, y: 300, health: 1000, vy: 0 };
   projectiles = [];
   gameEnded = false;
-  function startGame() {}
-    // Make sure to get the canvas after it's visible!
-    canvas = document.getElementById("gameCanvas");
-    ctx = canvas.getContext("2d");
-    // ...rest of your code...
-  
+
+  // Make sure to get the canvas after it's visible!
+  canvas = document.getElementById("gameCanvas");
+  ctx = canvas.getContext("2d");
 
   requestAnimationFrame(gameLoop);
 }
@@ -146,9 +146,18 @@ function gameLoop() {
   document.getElementById("p2-health").textContent = `Player 2: ${p2.health}`;
   document.getElementById("ai-health").textContent = aiEnabled ? `AI: ${ai.health}` : "";
 
-  if (p1.health <= 0) return showGameOver("Player 2");
-  if (p2.health <= 0) return showGameOver("Player 1");
-  if (aiEnabled && ai.health <= 0) return showGameOver("AI");
+  // --------- Fixed winner logic below ----------
+  // Gather alive fighters
+  const alive = [];
+  if (p1.health > 0) alive.push("Player 1");
+  if (p2.health > 0) alive.push("Player 2");
+  if (aiEnabled && ai.health > 0) alive.push("AI");
+
+  // Only 1 left standing? Show game over!
+  if (alive.length === 1) {
+    showGameOver(alive[0]);
+    return;
+  }
 
   requestAnimationFrame(gameLoop);
 }
@@ -272,12 +281,14 @@ function checkCollision(proj, target) {
     proj.y < target.y + 100
   );
 }
+
 function showGameOver(winner) {
   gameEnded = true;
   const gameOverText = document.getElementById("game-over");
   gameOverText.textContent = `${winner} wins!`;
   gameOverText.style.display = "block";
   setTimeout(() => {
+    gameOverText.style.display = "none"; // <-- Hide after next round!
     p1 = { x: 100, y: 300, health: 1000, vy: 0 };
     p2 = { x: 600, y: 300, health: 1000, vy: 0 };
     if (aiEnabled) ai = { x: 350, y: 300, health: 1000, vy: 0 };
