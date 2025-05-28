@@ -1,43 +1,47 @@
 body {
-  margin: 0;
   font-family: Arial, sans-serif;
-  background-color: #222;
-  color: white;
-  text-align: center;
-}
-
-#character-select {
+  background-color: #f4f4f4;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 0;
   padding: 20px;
 }
 
-.player-select {
-  display: inline-block;
-  margin: 10px;
+#character-select {
+  text-align: center;
 }
 
-.characters {
+.character-row {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
+  margin-bottom: 20px;
 }
 
-.characters img {
+.character-row img {
   width: 80px;
   height: 80px;
   margin: 5px;
-  border: 3px solid transparent;
-  border-radius: 10px;
   cursor: pointer;
+  border: 3px solid transparent;
 }
 
-.characters img.selected {
-  border-color: yellow;
+.character-row img.selected {
+  border: 3px solid red;
+}
+
+.player-label {
+  font-weight: bold;
+  margin: 10px 0;
 }
 
 #start-game {
+  background-color: #4CAF50;
+  color: white;
   padding: 10px 20px;
-  font-size: 18px;
-  margin-top: 20px;
+  border: none;
+  font-size: 16px;
   cursor: pointer;
 }
 
@@ -46,26 +50,34 @@ body {
   cursor: not-allowed;
 }
 
-#gameCanvas {
-  background: black;
-  border: 2px solid white;
-  display: block;
-  margin: 20px auto;
+canvas {
+  border: 2px solid #000;
+  background-color: #ddd;
+}
+.health-container {
+  width: 300px;
+  margin: 10px 0;
+  font-weight: bold;
 }
 
-#health-bars {
-  margin-top: 10px;
-  font-size: 18px;
+.health-bar-bg {
+  background-color: #ccc;
+  border: 2px solid #000;
+  height: 20px;
+  width: 100%;
+  position: relative;
+  border-radius: 10px;
+  overflow: hidden;
 }
-#game-over-screen {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background: black;
-  color: white;
-  font-size: 36px;
-  padding: 30px;
-  border: 5px solid red;
-  z-index: 10;
+
+.health-bar-fill {
+  background-color: #ff3333;
+  height: 100%;
+  width: 100%;
+  transition: width 0.2s ease-out;
+}
+#p1-health, #p2-health, #ai-health {
+  font-weight: bold;
+  margin: 8px;
+  color: #000;
 }

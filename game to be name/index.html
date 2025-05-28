@@ -1,39 +1,53 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Super Scratch Bros</title>
-  <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>2D Fighting Game</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div id="character-select">
-    <h1>Choose Your Character</h1>
-    <div class="player-select">
-      <h2>Player 1</h2>
-      <div id="p1-characters" class="characters"></div>
+    <h2>Select Characters</h2>
+
+    <div class="player-label">Player 1</div>
+    <div id="p1-characters" class="character-row"></div>
+
+    <div class="player-label">Player 2</div>
+    <div id="p2-characters" class="character-row"></div>
+
+    <div class="player-label">AI Player</div>
+    <div id="ai-characters" class="character-row"></div>
+
+    <!-- AI Toggle Switch -->
+    <div style="margin:10px 0;">
+      <label><strong>AI Opponent:</strong></label>
+      <input type="checkbox" id="ai-toggle" checked>
+      <label for="ai-toggle">AI ON</label>
     </div>
-    <div class="player-select">
-      <h2>Player 2</h2>
-      <div id="p2-characters" class="characters"></div>
+
+    <div style="margin: 10px 0;">
+      <label for="ai-difficulty"><strong>AI Difficulty:</strong></label>
+      <select id="ai-difficulty">
+        <option value="easy">Easy</option>
+        <option value="medium" selected>Medium</option>
+        <option value="hard">Hard</option>
+      </select>
     </div>
-    <button id="start-game" disabled>Start Battle</button>
+
+    <button id="start-game" disabled>Start Game</button>
   </div>
 
-  <div id="game-screen" style="display:none;">
+  <div id="game-screen" style="display: none;">
     <canvas id="gameCanvas" width="800" height="400"></canvas>
-    <div id="health-bars">
-      <span id="p1-health">Player 1: 100</span>
-      <span id="p2-health">Player 2: 100</span>
-    </div>
+    
+    <div id="p1-health"></div>
+    <div id="p2-health"></div>
+    <div id="ai-health"></div>
+    <div id="game-over" style="display: none; font-size: 32px; color: red; text-align: center; margin-top: 20px;"></div>
   </div>
 
+  <div id="game-over-screen" style="display: none;"></div>
   <script src="script.js"></script>
 </body>
 </html>
-<!-- Game Over Screen -->
-<div id="game-over-screen" style="display: none;"></div>
-``
-<!-- Instructional Screen -->
-<div id="instruction-screen" style="display: block; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0, 0, 0, 0.7); padding: 20px; color: white; font-size: 18px; text-align: center; z-index: 1000;">
-
-  <h2>How to Play</h2> <p><strong>Player 1:</strong><br> Move: A / D<br> Jump: W<br> Attack: R<br> Shield: Shift </p> <p><strong>Player 2:</strong><br> Move: Left / Right Arrows<br> Jump: Up Arrow<br> Attack: L<br> Shield: Enter </p> <p>Choose your characters and click <strong>Start Game</strong> to begin.</p> </div> ```
