@@ -81,3 +81,18 @@ canvas {
   margin: 8px;
   color: #000;
 }
+.energy-bar-bg {
+  background: #222;
+  border: 1px solid #555;
+  width: 200px;
+  height: 10px;
+  margin: 2px 0 8px 0;
+  border-radius: 5px;
+  overflow: hidden;
+}
+.energy-bar-fill {
+  background: linear-gradient(to right, #0ff 20%, #ff0 80%, #f00 100%);
+  height: 100%;
+  width: 0%;
+  transition: width 0.2s;
+}

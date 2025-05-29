@@ -14,9 +14,8 @@ const cooldowns = {
 let p1Char = null, p2Char = null, aiChar = null;
 let aiDifficulty = "medium";
 let aiEnabled = true;
-let gameMode = "versus"; // Default mode
+let gameMode = "versus";
 
-// Listen for mode select changes
 document.getElementById("game-mode").addEventListener("change", (e) => {
   gameMode = e.target.value;
   if (gameMode === "coop") {
@@ -39,7 +38,6 @@ document.getElementById("game-mode").addEventListener("change", (e) => {
 document.getElementById("ai-difficulty").addEventListener("change", e => {
   aiDifficulty = e.target.value;
 });
-
 document.getElementById("ai-toggle").addEventListener("change", e => {
   aiEnabled = e.target.checked;
   document.getElementById("ai-characters").style.display = aiEnabled ? "flex" : "none";
@@ -52,7 +50,6 @@ const p1Container = document.getElementById("p1-characters");
 const p2Container = document.getElementById("p2-characters");
 const aiContainer = document.getElementById("ai-characters");
 
-// Character select for each role
 characters.forEach(char => {
   function createChar(container, selectFn) {
     const img = document.createElement("img");
@@ -78,14 +75,12 @@ function selectCharacter(player, char, imgElement) {
   }
   validateStart();
 }
-
 function selectAICharacter(char, imgElement) {
   aiChar = char;
   document.querySelectorAll("#ai-characters img").forEach(i => i.classList.remove("selected"));
   imgElement.classList.add("selected");
   validateStart();
 }
-
 function validateStart() {
   if ((aiEnabled || gameMode === "coop")) {
     document.getElementById("start-game").disabled = !(p1Char && p2Char && aiChar);
@@ -94,7 +89,7 @@ function validateStart() {
   }
 }
 
-// ----------------- GAME LOGIC BELOW -----------------
+// --- GAME LOGIC BELOW ---
 
 let canvas = null, ctx = null;
 let p1, p2, ai, keys = {}, projectiles = [];
@@ -102,7 +97,11 @@ const groundY = 300, gravity = 1;
 const p1Img = new Image(), p2Img = new Image(), aiImg = new Image();
 let p1LastAttack = 0, p2LastAttack = 0, aiLastAttack = 0, gameEnded = false;
 
-document.addEventListener("keydown", e => keys[e.key] = true);
+document.addEventListener("keydown", e => {
+  keys[e.key] = true;
+  if (p1 && p1.health > 0 && e.key.toLowerCase() === "q" && p1.energy === 100) useUltimate(p1, 1);
+  if (p2 && p2.health > 0 && e.key.toLowerCase() === "o" && p2.energy === 100) useUltimate(p2, 2);
+});
 document.addEventListener("keyup", e => keys[e.key] = false);
 
 document.getElementById("start-game").addEventListener("click", () => {
@@ -113,14 +112,13 @@ document.getElementById("start-game").addEventListener("click", () => {
 
 function startGame() {
   document.getElementById("game-over").style.display = "none";
-
   p1Img.src = `images/${p1Char}.png`;
   p2Img.src = `images/${p2Char}.png`;
   if ((aiEnabled || gameMode === "coop") && aiChar) aiImg.src = `images/${aiChar}.png`;
 
-  p1 = { x: 100, y: 300, health: 1000, vy: 0, facing: "right" };
-  p2 = { x: 600, y: 300, health: 1000, vy: 0, facing: "left" };
-  ai = { x: 350, y: 300, health: 1000, vy: 0, facing: "left" };
+  p1 = { x: 100, y: 300, health: 1000, vy: 0, facing: "right", energy: 0 };
+  p2 = { x: 600, y: 300, health: 1000, vy: 0, facing: "left", energy: 0 };
+  ai = { x: 350, y: 300, health: 1000, vy: 0, facing: "left", energy: 0 };
   projectiles = [];
   gameEnded = false;
 
@@ -134,36 +132,42 @@ function gameLoop() {
   if (gameEnded) return;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  movePlayer(p1, ["a", "d", "w"]);
-  movePlayer(p2, ["ArrowLeft", "ArrowRight", "ArrowUp"]);
+  // Only move alive characters
+  if (p1.health > 0) movePlayer(p1, ["a", "d", "w"]);
+  if (p2.health > 0) movePlayer(p2, ["ArrowLeft", "ArrowRight", "ArrowUp"]);
   applyGravity(p1);
   applyGravity(p2);
-  if (aiEnabled || gameMode === "coop") {
+
+  if ((aiEnabled || gameMode === "coop") && ai.health > 0) {
     handleAI(ai, p1, performance.now());
     applyGravity(ai);
   }
 
   const now = performance.now();
-  if (keys["e"] && now - p1LastAttack >= cooldowns[p1Char]) {
+  // Only allow alive to attack
+  if (p1.health > 0 && keys["e"] && now - p1LastAttack >= cooldowns[p1Char]) {
     performAttack(p1, p1Char, 1);
     p1LastAttack = now;
   }
-  if (keys["l"] && now - p2LastAttack >= cooldowns[p2Char]) {
+  if (p2.health > 0 && keys["l"] && now - p2LastAttack >= cooldowns[p2Char]) {
     performAttack(p2, p2Char, 2);
     p2LastAttack = now;
   }
 
   moveProjectiles();
 
-  ctx.drawImage(p1Img, p1.x, p1.y, 100, 100);
-  ctx.drawImage(p2Img, p2.x, p2.y, 100, 100);
-  if ((aiEnabled || gameMode === "coop")) ctx.drawImage(aiImg, ai.x, ai.y, 100, 100);
+  // Only draw alive characters
+  if (p1.health > 0) ctx.drawImage(p1Img, p1.x, p1.y, 100, 100);
+  if (p2.health > 0) ctx.drawImage(p2Img, p2.x, p2.y, 100, 100);
+  if ((aiEnabled || gameMode === "coop") && ai.health > 0) ctx.drawImage(aiImg, ai.x, ai.y, 100, 100);
 
   document.getElementById("p1-health").textContent = `Player 1: ${p1.health}`;
   document.getElementById("p2-health").textContent = `Player 2: ${p2.health}`;
   document.getElementById("ai-health").textContent = (aiEnabled || gameMode === "coop") ? `AI: ${ai.health}` : "";
 
-  // --------- Mode-dependent winner logic below ----------
+  updateEnergyBars(); // Energy bar display
+
+  // Winner logic:
   if (gameMode === "versus") {
     const alive = [];
     if (p1.health > 0) alive.push("Player 1");
@@ -174,7 +178,6 @@ function gameLoop() {
       return;
     }
   } else if (gameMode === "coop") {
-    // Co-op: win if AI dies, lose if both players die
     if ((aiEnabled || gameMode === "coop") && ai.health <= 0) {
       showGameOver("win");
       return;
@@ -188,6 +191,7 @@ function gameLoop() {
   requestAnimationFrame(gameLoop);
 }
 
+// --- Movement and Facing ---
 function movePlayer(player, keysList) {
   if (keys[keysList[0]]) {
     player.x -= 5;
@@ -209,9 +213,9 @@ function applyGravity(player) {
   }
 }
 
-// ========== SMART AI FOR GUN CHARACTERS =============
+// --- AI Movement/Attacking & Facing ---
 function handleAI(ai, target, now) {
-  if (!(aiEnabled || gameMode === "coop")) return;
+  if (!(aiEnabled || gameMode === "coop") || ai.health <= 0) return;
   const dist = target.x - ai.x;
   const jump = Math.random();
   const aiType = getAttackType(aiChar);
@@ -235,8 +239,12 @@ function handleAI(ai, target, now) {
       performAttack(ai, aiChar, 3);
       aiLastAttack = now;
     }
+    // AI Ultimate
+    if (ai.energy === 100 && now - aiLastAttack >= 2500) {
+      useUltimate(ai, 3);
+      aiLastAttack = now;
+    }
   } else {
-    // Sword/fist AI (original difficulty logic)
     switch (aiDifficulty) {
       case "easy":
         if (Math.random() < 0.01) {
@@ -268,16 +276,21 @@ function handleAI(ai, target, now) {
         }
         break;
     }
+    if (ai.energy === 100 && now - aiLastAttack >= 2500) {
+      useUltimate(ai, 3);
+      aiLastAttack = now;
+    }
   }
 }
 
-// === MAIN CHANGE: Players can't hurt each other in co-op ===
+// --- Attack Logic ---
 function performAttack(player, character, owner) {
+  if (player.health <= 0) return;
   const type = getAttackType(character);
   let targets;
   if (gameMode === "coop") {
     if (owner === 1 || owner === 2) {
-      targets = [ai]; // Only attack AI
+      targets = [ai];
     } else if (owner === 3) {
       targets = [];
       if (p1.health > 0) targets.push(p1);
@@ -286,9 +299,8 @@ function performAttack(player, character, owner) {
   } else {
     targets = [p1, p2];
     if (aiEnabled || gameMode === "coop") targets.push(ai);
-    targets = targets.filter((_, idx) => (idx + 1) !== owner);
+    targets = targets.filter((_, idx) => (idx + 1) !== owner && targets[idx].health > 0);
   }
-
   if (type === "gun") {
     shootProjectile(player, character, owner);
   } else {
@@ -296,7 +308,6 @@ function performAttack(player, character, owner) {
   }
 }
 
-// === MAIN CHANGE: Projectiles can't hurt other player in co-op ===
 function moveProjectiles() {
   projectiles.forEach(p => p.x += p.vx);
   projectiles = projectiles.filter(p => {
@@ -312,13 +323,16 @@ function moveProjectiles() {
     } else {
       targets = [p1, p2];
       if (aiEnabled || gameMode === "coop") targets.push(ai);
-      targets = targets.filter((_, idx) => (idx + 1) !== p.owner);
+      targets = targets.filter((_, idx) => (idx + 1) !== p.owner && targets[idx].health > 0);
     }
 
     let hit = false;
     for (let i = 0; i < targets.length; i++) {
       if (checkCollision(p, targets[i])) {
         targets[i].health -= p.damage;
+        let ownerObj = (p.owner === 1) ? p1 : (p.owner === 2) ? p2 : ai;
+        ownerObj.energy = Math.min(100, ownerObj.energy + 10);
+        targets[i].energy = Math.min(100, targets[i].energy + 8);
         hit = true;
         break;
       }
@@ -334,6 +348,7 @@ function moveProjectiles() {
 }
 
 function performMeleeAttack(attacker, target, type) {
+  if (attacker.health <= 0 || target.health <= 0) return;
   const range = 100;
   const damage = type === "sword" ? 30 : 20;
   const inRange = (
@@ -341,27 +356,40 @@ function performMeleeAttack(attacker, target, type) {
     target.x + 100 > attacker.x &&
     Math.abs(target.y - attacker.y) < 50
   );
-  if (inRange) target.health -= damage;
+  if (inRange) {
+    target.health -= damage;
+    attacker.energy = Math.min(100, attacker.energy + 15);
+    target.energy = Math.min(100, target.energy + 8);
+  }
 }
 
-// === PROJECTILE FACES DIRECTION ===
 function shootProjectile(player, char, owner) {
+  if (player.health <= 0) return;
   const { color, size, speed, damage } = getCharacterProjectile(char);
-
-  let vx;
-  if (owner === 1) {
-    vx = player.facing === "right" ? speed : -speed;
-  } else if (owner === 2) {
-    vx = player.facing === "right" ? speed : -speed;
-  } else if (owner === 3) {
-    vx = player.facing === "right" ? speed : -speed;
-  } else {
-    vx = speed; // fallback, should not be used
-  }
-
-  // Spawn projectile at the "front" of the player based on facing
+  let vx = player.facing === "right" ? speed : -speed;
   const x = player.x + (player.facing === "right" ? 100 : 0);
   projectiles.push({ x, y: player.y + 50, vx, size, color, damage, owner });
+}
+
+function useUltimate(player, owner) {
+  if (player.health <= 0) return;
+  if (getAttackType(owner === 1 ? p1Char : owner === 2 ? p2Char : aiChar) === "gun") {
+    const vx = player.facing === "right" ? 18 : -18;
+    const x = player.x + (player.facing === "right" ? 100 : 0);
+    projectiles.push({
+      x, y: player.y + 50, vx, size: 20, color: "#ff0", damage: 120, owner
+    });
+  } else {
+    const targets = [];
+    if (owner === 1) { if (ai.health > 0) targets.push(ai); if (p2.health > 0) targets.push(p2);}
+    if (owner === 2) { if (ai.health > 0) targets.push(ai); if (p1.health > 0) targets.push(p1);}
+    if (owner === 3) { if (p1.health > 0) targets.push(p1); if (p2.health > 0) targets.push(p2);}
+    targets.forEach(target => {
+      if (target.health > 0) target.health -= 100;
+    });
+  }
+  player.energy = 0;
+  updateEnergyBars();
 }
 
 function getCharacterProjectile(char) {
@@ -403,11 +431,23 @@ function showGameOver(winner) {
   gameOverText.style.display = "block";
   setTimeout(() => {
     gameOverText.style.display = "none";
-    p1 = { x: 100, y: 300, health: 1000, vy: 0, facing: "right" };
-    p2 = { x: 600, y: 300, health: 1000, vy: 0, facing: "left" };
-    if (aiEnabled || gameMode === "coop") ai = { x: 350, y: 300, health: 1000, vy: 0, facing: "left" };
+    p1 = { x: 100, y: 300, health: 1000, vy: 0, facing: "right", energy: 0 };
+    p2 = { x: 600, y: 300, health: 1000, vy: 0, facing: "left", energy: 0 };
+    if (aiEnabled || gameMode === "coop") ai = { x: 350, y: 300, health: 1000, vy: 0, facing: "left", energy: 0 };
     keys = {};
     projectiles = [];
     startGame();
   }, 5000);
+}
+
+// --- Energy Bar Display ---
+function updateEnergyBars() {
+  let p1bar = document.getElementById("p1-energy");
+  let p2bar = document.getElementById("p2-energy");
+  let aibar = document.getElementById("ai-energy");
+  if (!p1bar || !p2bar || !aibar) return;
+
+  p1bar.style.width = `${p1.energy}%`;
+  p2bar.style.width = `${p2.energy}%`;
+  aibar.style.width = `${ai.energy}%`;
 }

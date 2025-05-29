@@ -14,8 +14,8 @@
     <div id="mode-select" style="margin-bottom:20px;">
       <label><strong>Mode:</strong></label>
       <select id="game-mode">
-        <option value="versus" selected>Versus (PvP)</option>
-        <option value="coop">Co-op (PvE)</option>
+        <option value="versus" selected>Classic</option>
+        <option value="coop">Classic Co-op</option>
         <option value="online">Online (Beta)</option>
       </select>
     </div>
@@ -53,8 +53,14 @@
     <canvas id="gameCanvas" width="800" height="400"></canvas>
     
     <div id="p1-health"></div>
+    <div id="p1-energy-bar" class="energy-bar-bg"><div id="p1-energy" class="energy-bar-fill"></div></div>
+
     <div id="p2-health"></div>
+    <div id="p2-energy-bar" class="energy-bar-bg"><div id="p2-energy" class="energy-bar-fill"></div></div>
+
     <div id="ai-health"></div>
+    <div id="ai-energy-bar" class="energy-bar-bg"><div id="ai-energy" class="energy-bar-fill"></div></div>
+    
     <div id="game-over" style="display: none; font-size: 32px; color: red; text-align: center; margin-top: 20px;"></div>
   </div>
 
