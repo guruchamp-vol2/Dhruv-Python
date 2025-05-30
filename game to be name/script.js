@@ -17,6 +17,21 @@ let aiEnabled = true;
 let gameMode = "versus";
 const MODERN_LIVES = 3;
 
+// Add these variables at the top of your file
+let ws = null;
+let playerId = null;
+let roomId = null;
+let isHost = false;
+
+// WebSocket connection and online game handling
+let currentRoomId = null;
+let isOnlineGame = false;
+
+// Add this at the top of your file
+const WEBSOCKET_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? 'ws://localhost:8001'
+    : 'wss://dhruv-python-production.up.railway.app';
+
 // --- Character Select UI ---
 document.getElementById("game-mode").addEventListener("change", (e) => {
   gameMode = e.target.value;
@@ -29,10 +44,26 @@ document.getElementById("game-mode").addEventListener("change", (e) => {
     document.getElementById("ai-health").style.display = "block";
   } else if (gameMode === "versus" || gameMode === "modern") {
     document.getElementById("ai-toggle").disabled = false;
-  } else if (gameMode === "online") {
-    alert("Online mode is in development. Please use local multiplayer for now!");
-    document.getElementById("game-mode").value = "versus";
-    gameMode = "versus";
+  } else if (gameMode === "onlineclassic" || gameMode === "onlinemodern") {
+    const hostGame = confirm("Do you want to host the game?");
+    isHost = hostGame;
+    isOnlineGame = true;
+    
+    if (hostGame) {
+      initializeOnlineGame(gameMode);
+    } else {
+      const code = prompt("Enter room code:");
+      if (code) {
+        initializeOnlineGame(gameMode);
+        // Join existing room after connection is established
+        setTimeout(() => {
+          ws.send(JSON.stringify({
+            type: 'join_room',
+            roomId: code
+          }));
+        }, 1000);
+      }
+    }
   }
   validateStart();
 });
@@ -651,11 +682,147 @@ function showGameOver(winner) {
   }, 5000);
 }
 function updateEnergyBars() {
-  let p1bar = document.getElementById("p1-energy");
-  let p2bar = document.getElementById("p2-energy");
-  let aibar = document.getElementById("ai-energy");
-  if (!p1bar || !p2bar || !aibar) return;
-  p1bar.style.width = `${p1.energy}%`;
-  p2bar.style.width = `${p2.energy}%`;
-  aibar.style.width = `${ai.energy}%`;
+  document.getElementById("p1-energy").style.width = `${p1.energy}%`;
+  document.getElementById("p2-energy").style.width = `${p2.energy}%`;
+  if (aiEnabled || gameMode === "coop" || gameMode === "moderncoop" || gameMode === "modern") {
+    document.getElementById("ai-energy").style.width = `${ai.energy}%`;
+  }
 }
+
+// Online Game Functions
+function initializeOnlineGame(mode) {
+  ws = new WebSocket(WEBSOCKET_URL);
+  
+  ws.onopen = () => {
+    console.log('Connected to server');
+  };
+
+  ws.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+    
+    switch(data.type) {
+      case 'init':
+        playerId = data.playerId;
+        // Create a new room if host
+        if (isHost) {
+          ws.send(JSON.stringify({
+            type: 'create_room',
+            gameMode: mode
+          }));
+        }
+        break;
+
+      case 'room_created':
+        roomId = data.roomId;
+        // Display room code for other player to join
+        alert(`Room Code: ${roomId}`);
+        break;
+
+      case 'player_joined':
+        if (data.players === 2) {
+          // Both players are in, can start character selection
+          document.getElementById("character-select").style.display = "block";
+        }
+        break;
+
+      case 'start_game':
+        // Start the game with received player data
+        startOnlineGame(data.players);
+        break;
+
+      case 'game_update':
+        // Update game state with received data
+        updateOnlineGameState(data.state);
+        break;
+
+      case 'player_disconnected':
+        alert("Other player disconnected!");
+        window.location.reload();
+        break;
+    }
+  };
+
+  ws.onclose = () => {
+    alert("Connection to server lost!");
+    window.location.reload();
+  };
+}
+
+function startOnlineGame(players) {
+  document.getElementById("character-select").style.display = "none";
+  document.getElementById("game-screen").style.display = "block";
+  
+  const isPlayer1 = players[0].id === playerId;
+  
+  if (gameMode === "onlineclassic") {
+    p1 = { x: isPlayer1 ? 100 : 600, y: 300, health: 1000, vy: 0, 
+           facing: isPlayer1 ? "right" : "left", energy: 0 };
+    p2 = { x: isPlayer1 ? 600 : 100, y: 300, health: 1000, vy: 0, 
+           facing: isPlayer1 ? "left" : "right", energy: 0 };
+  } else {
+    p1 = makeModernPlayer(isPlayer1 ? 100 : 600, 300, isPlayer1 ? "right" : "left");
+    p2 = makeModernPlayer(isPlayer1 ? 600 : 100, 300, isPlayer1 ? "left" : "right");
+  }
+  
+  // Set character images
+  p1Img.src = `images/${isPlayer1 ? players[0].character : players[1].character}.png`;
+  p2Img.src = `images/${isPlayer1 ? players[1].character : players[0].character}.png`;
+  
+  gameLoop();
+}
+
+function updateOnlineGameState(state) {
+  if (gameMode === "onlineclassic") {
+    p2.x = state.x;
+    p2.y = state.y;
+    p2.health = state.health;
+    p2.vy = state.vy;
+    p2.facing = state.facing;
+    p2.energy = state.energy;
+  } else {
+    p2.x = state.x;
+    p2.y = state.y;
+    p2.percent = state.percent;
+    p2.lives = state.lives;
+    p2.vy = state.vy;
+    p2.facing = state.facing;
+    p2.energy = state.energy;
+    p2.isOut = state.isOut;
+  }
+}
+
+function sendGameState() {
+  if (!ws || !playerId) return;
+  
+  const state = gameMode === "onlineclassic" ? {
+    x: p1.x,
+    y: p1.y,
+    health: p1.health,
+    vy: p1.vy,
+    facing: p1.facing,
+    energy: p1.energy
+  } : {
+    x: p1.x,
+    y: p1.y,
+    percent: p1.percent,
+    lives: p1.lives,
+    vy: p1.vy,
+    facing: p1.facing,
+    energy: p1.energy,
+    isOut: p1.isOut
+  };
+  
+  ws.send(JSON.stringify({
+    type: 'game_update',
+    state: state
+  }));
+}
+
+// Modify gameLoop to send state updates
+const originalGameLoop = gameLoop;
+gameLoop = function() {
+  originalGameLoop();
+  if (isOnlineGame) {
+    sendGameState();
+  }
+};

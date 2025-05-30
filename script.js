@@ -47,6 +47,7 @@ document.getElementById("game-mode").addEventListener("change", (e) => {
   } else if (gameMode === "onlineclassic" || gameMode === "onlinemodern") {
     const hostGame = confirm("Do you want to host the game?");
     isHost = hostGame;
+    isOnlineGame = true;
     
     if (hostGame) {
       initializeOnlineGame(gameMode);
@@ -63,10 +64,6 @@ document.getElementById("game-mode").addEventListener("change", (e) => {
         }, 1000);
       }
     }
-  } else if (gameMode === "onlineclassic" || gameMode === "onlinemodern") {
-    alert("Online modes are in development. Please use local multiplayer for now!");
-    document.getElementById("game-mode").value = gameMode === "onlineclassic" ? "versus" : "modern";
-    gameMode = gameMode === "onlineclassic" ? "versus" : "modern";
   }
   validateStart();
 });
