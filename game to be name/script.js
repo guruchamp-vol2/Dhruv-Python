@@ -275,110 +275,82 @@ function gameLoop() {
 // --- AI TARGETTING ---
 function handleAI(ai, now) {
   const target = getCurrentTarget();
-  if (!target || !(aiEnabled || gameMode === "coop") || ai.health <= 0) return;
-  const dist = target.x - ai.x;
-  const jump = Math.random();
-  const aiType = getAttackType(aiChar);
+  if (!target) return;
 
-  if (aiType === "gun") {
-    const idealMin = 250, idealMax = 400;
-    if (Math.abs(dist) < idealMin) ai.x -= Math.sign(dist) * 3;
-    else if (Math.abs(dist) > idealMax) ai.x += Math.sign(dist) * 2;
-    ai.facing = dist > 0 ? "right" : "left";
-    if (jump < 0.01 && ai.y === groundY) ai.vy = -12;
-    if (Math.abs(dist) > idealMin && Math.abs(dist) < idealMax &&
-      now - aiLastAttack >= cooldowns[aiChar]) {
+  // Use ultimate when energy is full
+  if (ai.energy === 100) {
+    useUltimateClassic(ai, 3);
+    return;
+  }
+
+  // Existing AI logic
+  const dx = target.x - ai.x;
+  const dy = target.y - ai.y;
+  const dist = Math.sqrt(dx * dx + dy * dy);
+  ai.facing = dx > 0 ? "right" : "left";
+
+  if (aiDifficulty === "easy") {
+    if (Math.random() < 0.02 && now - aiLastAttack >= cooldowns[aiChar]) {
       performAttack(ai, aiChar, 3);
       aiLastAttack = now;
     }
-  } else {
-    switch (aiDifficulty) {
-      case "easy":
-        if (Math.random() < 0.01) ai.x += dist > 0 ? 2 : -2;
-        if (jump < 0.005 && ai.y === groundY) ai.vy = -10;
-        if (Math.random() < 0.01 && now - aiLastAttack >= cooldowns[aiChar]) {
-          performAttack(ai, aiChar, 3);
-          aiLastAttack = now;
-        }
-        break;
-      case "medium":
-        ai.x += dist > 0 ? 2 : -2;
-        ai.facing = dist > 0 ? "right" : "left";
-        if (jump < 0.01 && ai.y === groundY) ai.vy = -12;
-        if (Math.abs(dist) < 150 && now - aiLastAttack >= cooldowns[aiChar]) {
-          performAttack(ai, aiChar, 3);
-          aiLastAttack = now;
-        }
-        break;
-      case "hard":
-        ai.x += dist > 0 ? 3 : -3;
-        ai.facing = dist > 0 ? "right" : "left";
-        if (jump < 0.02 && ai.y === groundY) ai.vy = -14;
-        if (Math.abs(dist) < 200 && now - aiLastAttack >= cooldowns[aiChar] && Math.random() < 0.9) {
-          performAttack(ai, aiChar, 3);
-          aiLastAttack = now;
-        }
-        break;
+    if (Math.random() < 0.02) ai.vy = -15;
+    if (Math.random() < 0.03) ai.x += dx > 0 ? 5 : -5;
+  } else if (aiDifficulty === "medium") {
+    if (dist < 150 && now - aiLastAttack >= cooldowns[aiChar]) {
+      performAttack(ai, aiChar, 3);
+      aiLastAttack = now;
     }
-  }
-  // AI ULT
-  if (ai.energy === 100 && now - aiLastAttack >= 2500) {
-    useUltimateClassic(ai, 3);
-    aiLastAttack = now;
+    if (dist > 200) ai.x += dx > 0 ? 5 : -5;
+    if (dy < -50 && ai.y === groundY) ai.vy = -15;
+  } else if (aiDifficulty === "hard") {
+    if (dist < 200 && now - aiLastAttack >= cooldowns[aiChar]) {
+      performAttack(ai, aiChar, 3);
+      aiLastAttack = now;
+    }
+    if (Math.abs(dx) > 100) ai.x += dx > 0 ? 6 : -6;
+    if (dy < -30 && ai.y === groundY) ai.vy = -15;
+    if (dist < 100) ai.x += dx > 0 ? -4 : 4;
   }
 }
 function handleAIModern(ai, now) {
   const target = getCurrentTarget();
-  if (!target || !(aiEnabled || gameMode === "moderncoop" || gameMode === "modern") || ai.lives <= 0 || ai.isOut) return;
-  const dist = target.x - ai.x;
-  const jump = Math.random();
-  const aiType = getAttackType(aiChar);
+  if (!target) return;
 
-  if (aiType === "gun") {
-    const idealMin = 250, idealMax = 400;
-    if (Math.abs(dist) < idealMin) ai.x -= Math.sign(dist) * 3;
-    else if (Math.abs(dist) > idealMax) ai.x += Math.sign(dist) * 2;
-    ai.facing = dist > 0 ? "right" : "left";
-    if (jump < 0.01 && ai.y === groundY) ai.vy = -12;
-    if (Math.abs(dist) > idealMin && Math.abs(dist) < idealMax &&
-      now - aiLastAttack >= cooldowns[aiChar]) {
+  // Use ultimate when energy is full
+  if (ai.energy === 100) {
+    useUltimateModern(ai, 3);
+    return;
+  }
+
+  // Existing AI logic
+  const dx = target.x - ai.x;
+  const dy = target.y - ai.y;
+  const dist = Math.sqrt(dx * dx + dy * dy);
+  ai.facing = dx > 0 ? "right" : "left";
+
+  if (aiDifficulty === "easy") {
+    if (Math.random() < 0.02 && now - aiLastAttack >= cooldowns[aiChar]) {
       performAttackModern(ai, aiChar, 3);
       aiLastAttack = now;
     }
-  } else {
-    switch (aiDifficulty) {
-      case "easy":
-        if (Math.random() < 0.01) ai.x += dist > 0 ? 2 : -2;
-        if (jump < 0.005 && ai.y === groundY) ai.vy = -10;
-        if (Math.random() < 0.01 && now - aiLastAttack >= cooldowns[aiChar]) {
-          performAttackModern(ai, aiChar, 3);
-          aiLastAttack = now;
-        }
-        break;
-      case "medium":
-        ai.x += dist > 0 ? 2 : -2;
-        ai.facing = dist > 0 ? "right" : "left";
-        if (jump < 0.01 && ai.y === groundY) ai.vy = -12;
-        if (Math.abs(dist) < 150 && now - aiLastAttack >= cooldowns[aiChar]) {
-          performAttackModern(ai, aiChar, 3);
-          aiLastAttack = now;
-        }
-        break;
-      case "hard":
-        ai.x += dist > 0 ? 3 : -3;
-        ai.facing = dist > 0 ? "right" : "left";
-        if (jump < 0.02 && ai.y === groundY) ai.vy = -14;
-        if (Math.abs(dist) < 200 && now - aiLastAttack >= cooldowns[aiChar] && Math.random() < 0.9) {
-          performAttackModern(ai, aiChar, 3);
-          aiLastAttack = now;
-        }
-        break;
+    if (Math.random() < 0.02) ai.vy = -15;
+    if (Math.random() < 0.03) ai.x += dx > 0 ? 5 : -5;
+  } else if (aiDifficulty === "medium") {
+    if (dist < 150 && now - aiLastAttack >= cooldowns[aiChar]) {
+      performAttackModern(ai, aiChar, 3);
+      aiLastAttack = now;
     }
-  }
-  // AI ULT
-  if (ai.energy === 100 && now - aiLastAttack >= 2500) {
-    useUltimateModern(ai, 3);
-    aiLastAttack = now;
+    if (dist > 200) ai.x += dx > 0 ? 5 : -5;
+    if (dy < -50 && ai.y === groundY) ai.vy = -15;
+  } else if (aiDifficulty === "hard") {
+    if (dist < 200 && now - aiLastAttack >= cooldowns[aiChar]) {
+      performAttackModern(ai, aiChar, 3);
+      aiLastAttack = now;
+    }
+    if (Math.abs(dx) > 100) ai.x += dx > 0 ? 6 : -6;
+    if (dy < -30 && ai.y === groundY) ai.vy = -15;
+    if (dist < 100) ai.x += dx > 0 ? -4 : 4;
   }
 }
 
