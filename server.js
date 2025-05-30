@@ -1,29 +1,19 @@
 const WebSocket = require('ws');
+const http = require('http');
 
 // Use the port provided by Railway or default to 8001
 const PORT = process.env.PORT || 8001;
 
-const wss = new WebSocket.Server({
-  port: PORT,
-  // Add CORS headers for GitHub Pages and localhost
-  verifyClient: (info) => {
-    const origin = info.origin || info.req.headers.origin;
-    const allowedOrigins = [
-      'https://guruchamp-vol2.github.io',
-      'http://localhost:8000',
-      'http://127.0.0.1:8000',
-      'https://dhruv-python-production.up.railway.app'
-    ];
-    
-    if (!allowedOrigins.includes(origin)) {
-      console.log('Rejected connection from:', origin);
-      return false;
-    }
-    return true;
-  }
+// Create an HTTP server
+const server = http.createServer((req, res) => {
+  res.writeHead(200, { 'Content-Type': 'text/plain' });
+  res.end('WebSocket server is running\n');
 });
 
-console.log(`WebSocket server is running on port ${PORT}`);
+// Create WebSocket server attached to HTTP server
+const wss = new WebSocket.Server({ server });
+
+console.log(`WebSocket server starting on port ${PORT}`);
 
 // Store active game rooms
 const gameRooms = new Map();
@@ -40,57 +30,78 @@ wss.on('connection', (ws, req) => {
 
       switch (data.type) {
         case 'init':
-          // Handle initial connection
-          playerId = Math.random().toString(36).substring(7);
-          ws.send(JSON.stringify({ type: 'init_ack', playerId }));
+          playerId = Math.random().toString(36).substring(2, 8);
+          ws.send(JSON.stringify({
+            type: 'init',
+            playerId: playerId
+          }));
           break;
 
         case 'create_room':
-          // Create a new room
-          roomId = Math.random().toString(36).substring(5);
+          roomId = Math.random().toString(36).substring(2, 5);
           gameRooms.set(roomId, {
-            players: [{ id: playerId, ws }],
+            host: playerId,
+            players: [{ id: playerId, ws: ws }],
             gameMode: data.gameMode
           });
-          ws.send(JSON.stringify({ type: 'room_created', roomId }));
+          ws.send(JSON.stringify({
+            type: 'room_created',
+            roomId: roomId
+          }));
           console.log('Room created:', roomId);
           break;
 
         case 'join_room':
-          // Join an existing room
           const room = gameRooms.get(data.roomId);
-          if (room && room.players.length < 2) {
-            roomId = data.roomId;
-            room.players.push({ id: playerId, ws });
-            
-            // Notify both players that the game can start
-            room.players.forEach(player => {
-              player.ws.send(JSON.stringify({
-                type: 'game_start',
-                players: room.players.map(p => p.id)
-              }));
-            });
-          } else {
-            ws.send(JSON.stringify({ type: 'error', message: 'Room full or not found' }));
+          if (!room) {
+            ws.send(JSON.stringify({
+              type: 'error',
+              message: 'Room not found'
+            }));
+            return;
           }
+          if (room.players.length >= 2) {
+            ws.send(JSON.stringify({
+              type: 'error',
+              message: 'Room is full'
+            }));
+            return;
+          }
+          roomId = data.roomId;
+          room.players.push({ id: playerId, ws: ws });
+          
+          // Notify both players that game can start
+          room.players.forEach(player => {
+            player.ws.send(JSON.stringify({
+              type: 'game_start',
+              players: room.players.map(p => ({ id: p.id }))
+            }));
+          });
           break;
 
-        case 'game_state':
-          // Forward game state to the other player in the room
+        case 'game_update':
           const currentRoom = gameRooms.get(roomId);
           if (currentRoom) {
-            const otherPlayer = currentRoom.players.find(p => p.id !== playerId);
-            if (otherPlayer) {
-              otherPlayer.ws.send(JSON.stringify({
-                type: 'game_state',
-                state: data.state
-              }));
-            }
+            // Send update to other player
+            currentRoom.players
+              .filter(p => p.id !== playerId)
+              .forEach(player => {
+                if (player.ws.readyState === WebSocket.OPEN) {
+                  player.ws.send(JSON.stringify({
+                    type: 'game_update',
+                    state: data.state
+                  }));
+                }
+              });
           }
           break;
       }
     } catch (error) {
       console.error('Error processing message:', error);
+      ws.send(JSON.stringify({
+        type: 'error',
+        message: 'Invalid message format'
+      }));
     }
   });
 
@@ -98,13 +109,32 @@ wss.on('connection', (ws, req) => {
     console.log('Client disconnected');
     if (roomId && gameRooms.has(roomId)) {
       const room = gameRooms.get(roomId);
-      const otherPlayer = room.players.find(p => p.id !== playerId);
-      
-      if (otherPlayer) {
-        otherPlayer.ws.send(JSON.stringify({ type: 'player_disconnected' }));
-      }
-      
+      // Notify other player about disconnection
+      room.players
+        .filter(p => p.id !== playerId)
+        .forEach(player => {
+          if (player.ws.readyState === WebSocket.OPEN) {
+            player.ws.send(JSON.stringify({
+              type: 'player_disconnected'
+            }));
+          }
+        });
+      // Clean up room
       gameRooms.delete(roomId);
+      console.log('Room deleted:', roomId);
     }
   });
+
+  // Send initial connection success
+  ws.send(JSON.stringify({ type: 'connected' }));
+});
+
+// Handle server errors
+wss.on('error', (error) => {
+  console.error('WebSocket server error:', error);
+});
+
+// Start the server
+server.listen(PORT, () => {
+  console.log(`WebSocket server is running on port ${PORT}`);
 }); 
