@@ -1,9 +1,9 @@
+// --- Character Setup ---
 const characters = [
   "mario", "luigi", "kirby", "sonic", "tails", "shadow",
   "toriel", "sans", "mettaton", "kris", "susie",
   "jevil", "spadeking", "berdly", "noelle", "spamton"
 ];
-
 const cooldowns = {
   mario: 750, luigi: 750, kirby: 750, sonic: 750, tails: 750,
   shadow: 500, toriel: 750, sans: 500, mettaton: 1250,
@@ -15,17 +15,19 @@ let p1Char = null, p2Char = null, aiChar = null;
 let aiDifficulty = "medium";
 let aiEnabled = true;
 let gameMode = "versus";
+const MODERN_LIVES = 3;
 
+// --- Character Select UI ---
 document.getElementById("game-mode").addEventListener("change", (e) => {
   gameMode = e.target.value;
-  if (gameMode === "coop") {
+  if (gameMode === "coop" || gameMode === "moderncoop") {
     document.getElementById("ai-toggle").checked = true;
     document.getElementById("ai-toggle").disabled = true;
     aiEnabled = true;
     document.getElementById("ai-characters").style.display = "flex";
     document.getElementById("ai-difficulty").disabled = false;
     document.getElementById("ai-health").style.display = "block";
-  } else if (gameMode === "versus") {
+  } else if (gameMode === "versus" || gameMode === "modern") {
     document.getElementById("ai-toggle").disabled = false;
   } else if (gameMode === "online") {
     alert("Online mode is in development. Please use local multiplayer for now!");
@@ -34,7 +36,6 @@ document.getElementById("game-mode").addEventListener("change", (e) => {
   }
   validateStart();
 });
-
 document.getElementById("ai-difficulty").addEventListener("change", e => {
   aiDifficulty = e.target.value;
 });
@@ -49,7 +50,6 @@ document.getElementById("ai-toggle").addEventListener("change", e => {
 const p1Container = document.getElementById("p1-characters");
 const p2Container = document.getElementById("p2-characters");
 const aiContainer = document.getElementById("ai-characters");
-
 characters.forEach(char => {
   function createChar(container, selectFn) {
     const img = document.createElement("img");
@@ -62,7 +62,6 @@ characters.forEach(char => {
   createChar(p2Container, (char, img) => selectCharacter(2, char, img));
   createChar(aiContainer, selectAICharacter);
 });
-
 function selectCharacter(player, char, imgElement) {
   if (player === 1) {
     p1Char = char;
@@ -82,14 +81,14 @@ function selectAICharacter(char, imgElement) {
   validateStart();
 }
 function validateStart() {
-  if ((aiEnabled || gameMode === "coop")) {
+  if ((aiEnabled || gameMode === "coop" || gameMode === "moderncoop" || gameMode === "modern")) {
     document.getElementById("start-game").disabled = !(p1Char && p2Char && aiChar);
   } else {
     document.getElementById("start-game").disabled = !(p1Char && p2Char);
   }
 }
 
-// --- GAME LOGIC BELOW ---
+// === GAME LOGIC ===
 
 let canvas = null, ctx = null;
 let p1, p2, ai, keys = {}, projectiles = [];
@@ -99,8 +98,13 @@ let p1LastAttack = 0, p2LastAttack = 0, aiLastAttack = 0, gameEnded = false;
 
 document.addEventListener("keydown", e => {
   keys[e.key] = true;
-  if (p1 && p1.health > 0 && e.key.toLowerCase() === "q" && p1.energy === 100) useUltimate(p1, 1);
-  if (p2 && p2.health > 0 && e.key.toLowerCase() === "o" && p2.energy === 100) useUltimate(p2, 2);
+  if (isModernMode()) {
+    if (p1 && !p1.isOut && p1.lives > 0 && e.key.toLowerCase() === "q" && p1.energy === 100) useUltimateModern(p1, 1);
+    if (p2 && !p2.isOut && p2.lives > 0 && e.key.toLowerCase() === "o" && p2.energy === 100) useUltimateModern(p2, 2);
+  } else {
+    if (p1 && p1.health > 0 && e.key.toLowerCase() === "q" && p1.energy === 100) useUltimateClassic(p1, 1);
+    if (p2 && p2.health > 0 && e.key.toLowerCase() === "o" && p2.energy === 100) useUltimateClassic(p2, 2);
+  }
 });
 document.addEventListener("keyup", e => keys[e.key] = false);
 
@@ -110,21 +114,47 @@ document.getElementById("start-game").addEventListener("click", () => {
   startGame();
 });
 
+function isModernMode() {
+  return gameMode === "modern" || gameMode === "moderncoop";
+}
+function makeModernPlayer(x, y, facing) {
+  return {
+    x, y, percent: 0, lives: MODERN_LIVES, vy: 0, facing,
+    energy: 0, knockback: 0, knockbackDir: 0, isOut: false
+  };
+}
+function getCurrentTarget() {
+  // Returns the first alive player (prefers p1)
+  if (isModernMode()) {
+    if (p1 && !p1.isOut && p1.lives > 0) return p1;
+    if (p2 && !p2.isOut && p2.lives > 0) return p2;
+  } else {
+    if (p1 && p1.health > 0) return p1;
+    if (p2 && p2.health > 0) return p2;
+  }
+  return null;
+}
+
 function startGame() {
   document.getElementById("game-over").style.display = "none";
   p1Img.src = `images/${p1Char}.png`;
   p2Img.src = `images/${p2Char}.png`;
-  if ((aiEnabled || gameMode === "coop") && aiChar) aiImg.src = `images/${aiChar}.png`;
+  if ((aiEnabled || gameMode === "coop" || gameMode === "moderncoop" || gameMode === "modern") && aiChar) aiImg.src = `images/${aiChar}.png`;
 
-  p1 = { x: 100, y: 300, health: 1000, vy: 0, facing: "right", energy: 0 };
-  p2 = { x: 600, y: 300, health: 1000, vy: 0, facing: "left", energy: 0 };
-  ai = { x: 350, y: 300, health: 1000, vy: 0, facing: "left", energy: 0 };
+  if (isModernMode()) {
+    p1 = makeModernPlayer(100, 300, "right");
+    p2 = makeModernPlayer(600, 300, "left");
+    ai = makeModernPlayer(350, 300, "left");
+  } else {
+    p1 = { x: 100, y: 300, health: 1000, vy: 0, facing: "right", energy: 0, knockback: 0, knockbackDir: 0 };
+    p2 = { x: 600, y: 300, health: 1000, vy: 0, facing: "left", energy: 0, knockback: 0, knockbackDir: 0 };
+    ai = { x: 350, y: 300, health: 1000, vy: 0, facing: "left", energy: 0, knockback: 0, knockbackDir: 0 };
+  }
   projectiles = [];
   gameEnded = false;
-
+  p1LastAttack = 0; p2LastAttack = 0; aiLastAttack = 0;
   canvas = document.getElementById("gameCanvas");
   ctx = canvas.getContext("2d");
-
   requestAnimationFrame(gameLoop);
 }
 
@@ -132,19 +162,73 @@ function gameLoop() {
   if (gameEnded) return;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // Only move alive characters
+  const now = performance.now();
+
+  if (isModernMode()) {
+    if (!p1.isOut && p1.lives > 0) movePlayerModern(p1, ["a", "d", "w"]);
+    if (!p2.isOut && p2.lives > 0) movePlayerModern(p2, ["ArrowLeft", "ArrowRight", "ArrowUp"]);
+    applyGravity(p1); applyGravity(p2);
+    if ((aiEnabled || gameMode === "moderncoop" || gameMode === "modern") && !ai.isOut && ai.lives > 0) {
+      handleAIModern(ai, now);
+      applyGravity(ai);
+    }
+    checkOutOfBounds(p1, 100, 300);
+    checkOutOfBounds(p2, 600, 300);
+    checkOutOfBounds(ai, 350, 300);
+
+    if (!p1.isOut && p1.lives > 0 && keys["e"] && now - p1LastAttack >= cooldowns[p1Char]) {
+      performAttackModern(p1, p1Char, 1);
+      p1LastAttack = now;
+    }
+    if (!p2.isOut && p2.lives > 0 && keys["l"] && now - p2LastAttack >= cooldowns[p2Char]) {
+      performAttackModern(p2, p2Char, 2);
+      p2LastAttack = now;
+    }
+
+    moveProjectilesModern();
+
+    if (!p1.isOut && p1.lives > 0) ctx.drawImage(p1Img, p1.x, p1.y, 100, 100);
+    if (!p2.isOut && p2.lives > 0) ctx.drawImage(p2Img, p2.x, p2.y, 100, 100);
+    if ((aiEnabled || gameMode === "moderncoop" || gameMode === "modern") && !ai.isOut && ai.lives > 0) ctx.drawImage(aiImg, ai.x, ai.y, 100, 100);
+
+    document.getElementById("p1-health").textContent = `P1: ${p1.percent}% | Lives: ${p1.lives}`;
+    document.getElementById("p2-health").textContent = `P2: ${p2.percent}% | Lives: ${p2.lives}`;
+    document.getElementById("ai-health").textContent =
+      (aiEnabled || gameMode === "moderncoop" || gameMode === "modern") ? `AI: ${ai.percent}% | Lives: ${ai.lives}` : "";
+
+    updateEnergyBars();
+
+    // Win/Lose logic
+    if (gameMode === "modern") {
+      let alive = [p1, p2, ai].filter(p => !p.isOut && p.lives > 0);
+      if (alive.length <= 1) {
+        let winner = p1.lives > 0 ? "Player 1" : p2.lives > 0 ? "Player 2" : "AI";
+        showGameOver(winner);
+        return;
+      }
+    } else if (gameMode === "moderncoop") {
+      if (ai.lives <= 0 || ai.isOut) {
+        showGameOver("You win!");
+        return;
+      }
+      if ((p1.lives <= 0 || p1.isOut) && (p2.lives <= 0 || p2.isOut)) {
+        showGameOver("You lose!");
+        return;
+      }
+    }
+    requestAnimationFrame(gameLoop);
+    return;
+  }
+
   if (p1.health > 0) movePlayer(p1, ["a", "d", "w"]);
   if (p2.health > 0) movePlayer(p2, ["ArrowLeft", "ArrowRight", "ArrowUp"]);
-  applyGravity(p1);
-  applyGravity(p2);
+  applyGravity(p1); applyGravity(p2);
 
   if ((aiEnabled || gameMode === "coop") && ai.health > 0) {
-    handleAI(ai, p1, performance.now());
+    handleAI(ai, now);
     applyGravity(ai);
   }
 
-  const now = performance.now();
-  // Only allow alive to attack
   if (p1.health > 0 && keys["e"] && now - p1LastAttack >= cooldowns[p1Char]) {
     performAttack(p1, p1Char, 1);
     p1LastAttack = now;
@@ -156,18 +240,16 @@ function gameLoop() {
 
   moveProjectiles();
 
-  // Only draw alive characters
   if (p1.health > 0) ctx.drawImage(p1Img, p1.x, p1.y, 100, 100);
   if (p2.health > 0) ctx.drawImage(p2Img, p2.x, p2.y, 100, 100);
   if ((aiEnabled || gameMode === "coop") && ai.health > 0) ctx.drawImage(aiImg, ai.x, ai.y, 100, 100);
 
-  document.getElementById("p1-health").textContent = `Player 1: ${p1.health}`;
-  document.getElementById("p2-health").textContent = `Player 2: ${p2.health}`;
-  document.getElementById("ai-health").textContent = (aiEnabled || gameMode === "coop") ? `AI: ${ai.health}` : "";
+  document.getElementById("p1-health").textContent = `Player 1: ${Math.max(0, p1.health)}`;
+  document.getElementById("p2-health").textContent = `Player 2: ${Math.max(0, p2.health)}`;
+  document.getElementById("ai-health").textContent = (aiEnabled || gameMode === "coop") ? `AI: ${Math.max(0, ai.health)}` : "";
 
-  updateEnergyBars(); // Energy bar display
+  updateEnergyBars();
 
-  // Winner logic:
   if (gameMode === "versus") {
     const alive = [];
     if (p1.health > 0) alive.push("Player 1");
@@ -187,70 +269,32 @@ function gameLoop() {
       return;
     }
   }
-
   requestAnimationFrame(gameLoop);
 }
 
-// --- Movement and Facing ---
-function movePlayer(player, keysList) {
-  if (keys[keysList[0]]) {
-    player.x -= 5;
-    player.facing = "left";
-  }
-  if (keys[keysList[1]]) {
-    player.x += 5;
-    player.facing = "right";
-  }
-  if (keys[keysList[2]] && player.y === groundY) player.vy = -15;
-}
-
-function applyGravity(player) {
-  player.vy += gravity;
-  player.y += player.vy;
-  if (player.y > groundY) {
-    player.y = groundY;
-    player.vy = 0;
-  }
-}
-
-// --- AI Movement/Attacking & Facing ---
-function handleAI(ai, target, now) {
-  if (!(aiEnabled || gameMode === "coop") || ai.health <= 0) return;
+// --- AI TARGETTING ---
+function handleAI(ai, now) {
+  const target = getCurrentTarget();
+  if (!target || !(aiEnabled || gameMode === "coop") || ai.health <= 0) return;
   const dist = target.x - ai.x;
   const jump = Math.random();
   const aiType = getAttackType(aiChar);
 
   if (aiType === "gun") {
     const idealMin = 250, idealMax = 400;
-    if (Math.abs(dist) < idealMin) {
-      ai.x -= Math.sign(dist) * 3;
-      ai.facing = dist < 0 ? "left" : "right";
-    } else if (Math.abs(dist) > idealMax) {
-      ai.x += Math.sign(dist) * 2;
-      ai.facing = dist > 0 ? "right" : "left";
-    } else {
-      ai.facing = dist > 0 ? "right" : "left";
-    }
+    if (Math.abs(dist) < idealMin) ai.x -= Math.sign(dist) * 3;
+    else if (Math.abs(dist) > idealMax) ai.x += Math.sign(dist) * 2;
+    ai.facing = dist > 0 ? "right" : "left";
     if (jump < 0.01 && ai.y === groundY) ai.vy = -12;
-    if (
-      Math.abs(dist) > idealMin && Math.abs(dist) < idealMax &&
-      now - aiLastAttack >= cooldowns[aiChar]
-    ) {
+    if (Math.abs(dist) > idealMin && Math.abs(dist) < idealMax &&
+      now - aiLastAttack >= cooldowns[aiChar]) {
       performAttack(ai, aiChar, 3);
-      aiLastAttack = now;
-    }
-    // AI Ultimate
-    if (ai.energy === 100 && now - aiLastAttack >= 2500) {
-      useUltimate(ai, 3);
       aiLastAttack = now;
     }
   } else {
     switch (aiDifficulty) {
       case "easy":
-        if (Math.random() < 0.01) {
-          ai.x += dist > 0 ? 2 : -2;
-          ai.facing = dist > 0 ? "right" : "left";
-        }
+        if (Math.random() < 0.01) ai.x += dist > 0 ? 2 : -2;
         if (jump < 0.005 && ai.y === groundY) ai.vy = -10;
         if (Math.random() < 0.01 && now - aiLastAttack >= cooldowns[aiChar]) {
           performAttack(ai, aiChar, 3);
@@ -276,22 +320,253 @@ function handleAI(ai, target, now) {
         }
         break;
     }
-    if (ai.energy === 100 && now - aiLastAttack >= 2500) {
-      useUltimate(ai, 3);
+  }
+  // AI ULT
+  if (ai.energy === 100 && now - aiLastAttack >= 2500) {
+    useUltimateClassic(ai, 3);
+    aiLastAttack = now;
+  }
+}
+function handleAIModern(ai, now) {
+  const target = getCurrentTarget();
+  if (!target || !(aiEnabled || gameMode === "moderncoop" || gameMode === "modern") || ai.lives <= 0 || ai.isOut) return;
+  const dist = target.x - ai.x;
+  const jump = Math.random();
+  const aiType = getAttackType(aiChar);
+
+  if (aiType === "gun") {
+    const idealMin = 250, idealMax = 400;
+    if (Math.abs(dist) < idealMin) ai.x -= Math.sign(dist) * 3;
+    else if (Math.abs(dist) > idealMax) ai.x += Math.sign(dist) * 2;
+    ai.facing = dist > 0 ? "right" : "left";
+    if (jump < 0.01 && ai.y === groundY) ai.vy = -12;
+    if (Math.abs(dist) > idealMin && Math.abs(dist) < idealMax &&
+      now - aiLastAttack >= cooldowns[aiChar]) {
+      performAttackModern(ai, aiChar, 3);
       aiLastAttack = now;
     }
+  } else {
+    switch (aiDifficulty) {
+      case "easy":
+        if (Math.random() < 0.01) ai.x += dist > 0 ? 2 : -2;
+        if (jump < 0.005 && ai.y === groundY) ai.vy = -10;
+        if (Math.random() < 0.01 && now - aiLastAttack >= cooldowns[aiChar]) {
+          performAttackModern(ai, aiChar, 3);
+          aiLastAttack = now;
+        }
+        break;
+      case "medium":
+        ai.x += dist > 0 ? 2 : -2;
+        ai.facing = dist > 0 ? "right" : "left";
+        if (jump < 0.01 && ai.y === groundY) ai.vy = -12;
+        if (Math.abs(dist) < 150 && now - aiLastAttack >= cooldowns[aiChar]) {
+          performAttackModern(ai, aiChar, 3);
+          aiLastAttack = now;
+        }
+        break;
+      case "hard":
+        ai.x += dist > 0 ? 3 : -3;
+        ai.facing = dist > 0 ? "right" : "left";
+        if (jump < 0.02 && ai.y === groundY) ai.vy = -14;
+        if (Math.abs(dist) < 200 && now - aiLastAttack >= cooldowns[aiChar] && Math.random() < 0.9) {
+          performAttackModern(ai, aiChar, 3);
+          aiLastAttack = now;
+        }
+        break;
+    }
+  }
+  // AI ULT
+  if (ai.energy === 100 && now - aiLastAttack >= 2500) {
+    useUltimateModern(ai, 3);
+    aiLastAttack = now;
   }
 }
 
-// --- Attack Logic ---
+// ========== MODERN LOGIC =============
+function movePlayerModern(player, keysList) {
+  if (player.knockback && !player.isOut && player.lives > 0) {
+    player.x += player.knockback * player.knockbackDir;
+    player.knockback *= 0.85;
+    if (Math.abs(player.knockback) < 1) player.knockback = 0;
+    return;
+  }
+  if (keys[keysList[0]]) { player.x -= 5; player.facing = "left"; }
+  if (keys[keysList[1]]) { player.x += 5; player.facing = "right"; }
+  if (keys[keysList[2]] && player.y === groundY) player.vy = -15;
+}
+function checkOutOfBounds(player, startX, startY) {
+  if (player.isOut) return;
+  if (player.x < -80 || player.x > canvas.width + 30 ||
+      player.y > canvas.height + 50 || player.y < -120) {
+    player.lives--;
+    if (player.lives <= 0) {
+      player.isOut = true;
+    } else {
+      Object.assign(player, { x: startX, y: startY, percent: 0, vy: 0, knockback: 0, knockbackDir: 0 });
+    }
+  }
+}
+function performAttackModern(player, character, owner) {
+  if (player.isOut || player.lives <= 0) return;
+  const type = getAttackType(character);
+  let targets;
+  if (gameMode === "moderncoop") {
+    if (owner === 1 || owner === 2) targets = [ai];
+    else if (owner === 3) {
+      targets = [];
+      if (p1.lives > 0 && !p1.isOut) targets.push(p1);
+      if (p2.lives > 0 && !p2.isOut) targets.push(p2);
+    }
+  } else {
+    targets = [p1, p2];
+    if (aiEnabled || gameMode === "moderncoop" || gameMode === "modern") targets.push(ai);
+    targets = targets.filter((_, idx) => (idx + 1) !== owner && targets[idx].lives > 0 && !targets[idx].isOut);
+  }
+  if (type === "gun") {
+    shootProjectileModern(player, character, owner);
+  } else {
+    targets.forEach(target => {
+      const range = 100;
+      const inRange = (
+        target.x < player.x + range &&
+        target.x + 100 > player.x &&
+        Math.abs(target.y - player.y) < 50
+      );
+      if (inRange) {
+        takeHitModern(
+          target,
+          type === "sword" ? 30 : 20,
+          player.facing === "right" ? 1 : -1,
+          type === "sword" ? 14 : 10,
+          player
+        );
+      }
+    });
+  }
+}
+function moveProjectilesModern() {
+  projectiles.forEach(p => p.x += p.vx);
+  projectiles = projectiles.filter(p => {
+    let targets;
+    if (gameMode === "moderncoop") {
+      if (p.owner === 1 || p.owner === 2) targets = [ai];
+      else if (p.owner === 3) {
+        targets = [];
+        if (p1.lives > 0 && !p1.isOut) targets.push(p1);
+        if (p2.lives > 0 && !p2.isOut) targets.push(p2);
+      }
+    } else {
+      targets = [p1, p2];
+      if (aiEnabled || gameMode === "moderncoop" || gameMode === "modern") targets.push(ai);
+      targets = targets.filter((_, idx) => (idx + 1) !== p.owner && targets[idx].lives > 0 && !targets[idx].isOut);
+    }
+    let hit = false;
+    for (let i = 0; i < targets.length; i++) {
+      if (checkCollision(p, targets[i]) && targets[i].lives > 0 && !targets[i].isOut) {
+        takeHitModern(targets[i], p.damage, p.vx > 0 ? 1 : -1, p.size >= 15 ? 25 : 10, (p.owner === 1) ? p1 : (p.owner === 2) ? p2 : ai);
+        hit = true;
+        break;
+      }
+    }
+    return !hit && p.x >= 0 && p.x <= canvas.width;
+  });
+  projectiles.forEach(p => {
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+    ctx.fill();
+  });
+}
+function takeHitModern(player, damage, attackerDir, baseKnock, attacker) {
+  player.percent += damage;
+  player.knockback = baseKnock * (1 + player.percent / 100);
+  player.knockbackDir = attackerDir;
+  if (attacker) attacker.energy = Math.min(100, (attacker.energy || 0) + 10);
+  player.energy = Math.min(100, (player.energy || 0) + 8);
+}
+
+// --- ULTIMATES ---
+function useUltimateClassic(player, owner) {
+  if (player.health <= 0) return;
+  if (getAttackType(owner === 1 ? p1Char : owner === 2 ? p2Char : aiChar) === "gun") {
+    const vx = player.facing === "right" ? 18 : -18;
+    const x = player.x + (player.facing === "right" ? 100 : 0);
+    projectiles.push({
+      x, y: player.y + 50, vx, size: 20, color: "#ff0", damage: 120, owner
+    });
+  } else {
+    const targets = [];
+    if (owner === 1) { if (ai.health > 0) targets.push(ai); if (p2.health > 0) targets.push(p2);}
+    if (owner === 2) { if (ai.health > 0) targets.push(ai); if (p1.health > 0) targets.push(p1);}
+    if (owner === 3) { if (p1.health > 0) targets.push(p1); if (p2.health > 0) targets.push(p2);}
+    targets.forEach(target => {
+      if (target.health > 0) {
+        target.health -= 100;
+        target.knockback = 28;
+        target.knockbackDir = (target.x < player.x) ? -1 : 1;
+      }
+    });
+  }
+  player.energy = 0;
+  updateEnergyBars();
+}
+function useUltimateModern(player, owner) {
+  if (player.isOut || player.lives <= 0) return;
+  if (getAttackType(owner === 1 ? p1Char : owner === 2 ? p2Char : aiChar) === "gun") {
+    const vx = player.facing === "right" ? 18 : -18;
+    const x = player.x + (player.facing === "right" ? 100 : 0);
+    projectiles.push({
+      x, y: player.y + 50, vx, size: 20, color: "#ff0", damage: 70, owner
+    });
+  } else {
+    const targets = [];
+    if (owner === 1) { if (ai.lives > 0 && !ai.isOut) targets.push(ai); if (p2.lives > 0 && !p2.isOut) targets.push(p2);}
+    if (owner === 2) { if (ai.lives > 0 && !ai.isOut) targets.push(ai); if (p1.lives > 0 && !p1.isOut) targets.push(p1);}
+    if (owner === 3) { if (p1.lives > 0 && !p1.isOut) targets.push(p1); if (p2.lives > 0 && !p2.isOut) targets.push(p2);}
+    targets.forEach(target => {
+      takeHitModern(target, 55, (target.x < player.x) ? -1 : 1, 28, player);
+    });
+  }
+  player.energy = 0;
+  updateEnergyBars();
+}
+function shootProjectileModern(player, char, owner) {
+  if (player.isOut || player.lives <= 0) return;
+  const { color, size, speed, damage } = getCharacterProjectile(char);
+  let vx = player.facing === "right" ? speed : -speed;
+  const x = player.x + (player.facing === "right" ? 100 : 0);
+  projectiles.push({ x, y: player.y + 50, vx, size, color, damage, owner });
+}
+
+// === CLASSIC LOGIC ===
+function movePlayer(player, keysList) {
+  if (player.knockback && player.health > 0) {
+    player.x += player.knockback * player.knockbackDir;
+    player.knockback *= 0.85;
+    if (Math.abs(player.knockback) < 1) player.knockback = 0;
+    player.x = Math.max(0, Math.min(canvas.width - 100, player.x));
+    return;
+  }
+  if (keys[keysList[0]]) { player.x -= 5; player.facing = "left"; }
+  if (keys[keysList[1]]) { player.x += 5; player.facing = "right"; }
+  if (keys[keysList[2]] && player.y === groundY) player.vy = -15;
+  player.x = Math.max(0, Math.min(canvas.width - 100, player.x));
+}
+function applyGravity(player) {
+  player.vy += gravity;
+  player.y += player.vy;
+  if (player.y > groundY) {
+    player.y = groundY;
+    player.vy = 0;
+  }
+}
 function performAttack(player, character, owner) {
   if (player.health <= 0) return;
   const type = getAttackType(character);
   let targets;
   if (gameMode === "coop") {
-    if (owner === 1 || owner === 2) {
-      targets = [ai];
-    } else if (owner === 3) {
+    if (owner === 1 || owner === 2) targets = [ai];
+    else if (owner === 3) {
       targets = [];
       if (p1.health > 0) targets.push(p1);
       if (p2.health > 0) targets.push(p2);
@@ -307,15 +582,13 @@ function performAttack(player, character, owner) {
     targets.forEach(target => performMeleeAttack(player, target, type));
   }
 }
-
 function moveProjectiles() {
   projectiles.forEach(p => p.x += p.vx);
   projectiles = projectiles.filter(p => {
     let targets;
     if (gameMode === "coop") {
-      if (p.owner === 1 || p.owner === 2) {
-        targets = [ai];
-      } else if (p.owner === 3) {
+      if (p.owner === 1 || p.owner === 2) targets = [ai];
+      else if (p.owner === 3) {
         targets = [];
         if (p1.health > 0) targets.push(p1);
         if (p2.health > 0) targets.push(p2);
@@ -325,14 +598,16 @@ function moveProjectiles() {
       if (aiEnabled || gameMode === "coop") targets.push(ai);
       targets = targets.filter((_, idx) => (idx + 1) !== p.owner && targets[idx].health > 0);
     }
-
     let hit = false;
     for (let i = 0; i < targets.length; i++) {
-      if (checkCollision(p, targets[i])) {
+      if (checkCollision(p, targets[i]) && targets[i].health > 0) {
         targets[i].health -= p.damage;
         let ownerObj = (p.owner === 1) ? p1 : (p.owner === 2) ? p2 : ai;
         ownerObj.energy = Math.min(100, ownerObj.energy + 10);
         targets[i].energy = Math.min(100, targets[i].energy + 8);
+        let baseKB = (p.size >= 15) ? 25 : 10;
+        targets[i].knockback = baseKB;
+        targets[i].knockbackDir = (p.vx > 0) ? 1 : -1;
         hit = true;
         break;
       }
@@ -346,7 +621,6 @@ function moveProjectiles() {
     ctx.fill();
   });
 }
-
 function performMeleeAttack(attacker, target, type) {
   if (attacker.health <= 0 || target.health <= 0) return;
   const range = 100;
@@ -360,9 +634,10 @@ function performMeleeAttack(attacker, target, type) {
     target.health -= damage;
     attacker.energy = Math.min(100, attacker.energy + 15);
     target.energy = Math.min(100, target.energy + 8);
+    target.knockback = (type === "sword" ? 14 : 10);
+    target.knockbackDir = (target.x < attacker.x) ? -1 : 1;
   }
 }
-
 function shootProjectile(player, char, owner) {
   if (player.health <= 0) return;
   const { color, size, speed, damage } = getCharacterProjectile(char);
@@ -371,27 +646,7 @@ function shootProjectile(player, char, owner) {
   projectiles.push({ x, y: player.y + 50, vx, size, color, damage, owner });
 }
 
-function useUltimate(player, owner) {
-  if (player.health <= 0) return;
-  if (getAttackType(owner === 1 ? p1Char : owner === 2 ? p2Char : aiChar) === "gun") {
-    const vx = player.facing === "right" ? 18 : -18;
-    const x = player.x + (player.facing === "right" ? 100 : 0);
-    projectiles.push({
-      x, y: player.y + 50, vx, size: 20, color: "#ff0", damage: 120, owner
-    });
-  } else {
-    const targets = [];
-    if (owner === 1) { if (ai.health > 0) targets.push(ai); if (p2.health > 0) targets.push(p2);}
-    if (owner === 2) { if (ai.health > 0) targets.push(ai); if (p1.health > 0) targets.push(p1);}
-    if (owner === 3) { if (p1.health > 0) targets.push(p1); if (p2.health > 0) targets.push(p2);}
-    targets.forEach(target => {
-      if (target.health > 0) target.health -= 100;
-    });
-  }
-  player.energy = 0;
-  updateEnergyBars();
-}
-
+// --- Shared utilities ---
 function getCharacterProjectile(char) {
   switch (char) {
     case "sans": return { color: "white", size: 4, speed: 10, damage: 15 };
@@ -413,40 +668,21 @@ function checkCollision(proj, target) {
     proj.y < target.y + 100
   );
 }
-
 function showGameOver(winner) {
   gameEnded = true;
   const gameOverText = document.getElementById("game-over");
-  if (gameMode === "coop") {
-    if (winner === "win") {
-      gameOverText.textContent = "You win!";
-    } else if (winner === "lose") {
-      gameOverText.textContent = "You lose!";
-    }
-  } else if (winner === "Players (Co-op)") {
-    gameOverText.textContent = `Players win (Co-op)!`;
-  } else {
-    gameOverText.textContent = `${winner} wins!`;
-  }
+  gameOverText.textContent = winner + " wins!";
   gameOverText.style.display = "block";
   setTimeout(() => {
     gameOverText.style.display = "none";
-    p1 = { x: 100, y: 300, health: 1000, vy: 0, facing: "right", energy: 0 };
-    p2 = { x: 600, y: 300, health: 1000, vy: 0, facing: "left", energy: 0 };
-    if (aiEnabled || gameMode === "coop") ai = { x: 350, y: 300, health: 1000, vy: 0, facing: "left", energy: 0 };
-    keys = {};
-    projectiles = [];
     startGame();
   }, 5000);
 }
-
-// --- Energy Bar Display ---
 function updateEnergyBars() {
   let p1bar = document.getElementById("p1-energy");
   let p2bar = document.getElementById("p2-energy");
   let aibar = document.getElementById("ai-energy");
   if (!p1bar || !p2bar || !aibar) return;
-
   p1bar.style.width = `${p1.energy}%`;
   p2bar.style.width = `${p2.energy}%`;
   aibar.style.width = `${ai.energy}%`;

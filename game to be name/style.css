@@ -7,35 +7,31 @@ body {
   margin: 0;
   padding: 20px;
 }
-
 #character-select {
   text-align: center;
 }
-
 .character-row {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
   margin-bottom: 20px;
 }
-
 .character-row img {
   width: 80px;
   height: 80px;
   margin: 5px;
   cursor: pointer;
   border: 3px solid transparent;
+  background: #fff;
+  object-fit: cover;
 }
-
 .character-row img.selected {
   border: 3px solid red;
 }
-
 .player-label {
   font-weight: bold;
   margin: 10px 0;
 }
-
 #start-game {
   background-color: #4CAF50;
   color: white;
@@ -44,47 +40,42 @@ body {
   font-size: 16px;
   cursor: pointer;
 }
-
 #start-game:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
-
 canvas {
   border: 2px solid #000;
   background-color: #ddd;
 }
-.health-container {
-  width: 300px;
-  margin: 10px 0;
-  font-weight: bold;
-}
-
-.health-bar-bg {
-  background-color: #ccc;
-  border: 2px solid #000;
-  height: 20px;
+#hud {
+  position: absolute;
+  top: 10px;
+  left: 0;
   width: 100%;
-  position: relative;
-  border-radius: 10px;
-  overflow: hidden;
+  display: flex;
+  justify-content: space-between;
+  z-index: 10;
+  pointer-events: none;
 }
-
-.health-bar-fill {
-  background-color: #ff3333;
-  height: 100%;
-  width: 100%;
-  transition: width 0.2s ease-out;
+#hud > div {
+  background: rgba(255,255,255,0.92);
+  padding: 6px 12px;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px #0002;
+  min-width: 180px;
+  margin: 0 10px;
 }
-#p1-health, #p2-health, #ai-health {
+#hud #p1-health, #hud #p2-health, #hud #ai-health {
   font-weight: bold;
-  margin: 8px;
-  color: #000;
+  margin-bottom: 4px;
+  color: #111;
+  font-size: 17px;
 }
 .energy-bar-bg {
   background: #222;
   border: 1px solid #555;
-  width: 200px;
+  width: 120px;
   height: 10px;
   margin: 2px 0 8px 0;
   border-radius: 5px;
