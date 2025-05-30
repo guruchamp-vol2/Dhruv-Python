@@ -1,7 +1,7 @@
 // WebSocket URL configuration
 const WEBSOCKET_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
   ? 'ws://localhost:8001'
-  : 'wss://fighting-game-server-production.up.railway.app';
+  : 'wss://dhruv-python-production.up.railway.app';
 
 // --- Character Setup ---
 const characters = [
