@@ -45,6 +45,13 @@ document.getElementById("game-mode").addEventListener("change", (e) => {
   } else if (gameMode === "versus" || gameMode === "modern") {
     document.getElementById("ai-toggle").disabled = false;
   } else if (gameMode === "onlineclassic" || gameMode === "onlinemodern") {
+    document.getElementById("ai-toggle").checked = false;
+    document.getElementById("ai-toggle").disabled = true;
+    aiEnabled = false;
+    document.getElementById("ai-characters").style.display = "none";
+    document.getElementById("ai-difficulty").disabled = true;
+    document.getElementById("ai-health").style.display = "none";
+    
     const hostGame = confirm("Do you want to host the game?");
     isHost = hostGame;
     isOnlineGame = true;
@@ -695,10 +702,15 @@ function initializeOnlineGame(mode) {
   
   ws.onopen = () => {
     console.log('Connected to server');
+    // Send initial connection message
+    ws.send(JSON.stringify({
+      type: 'init'
+    }));
   };
 
   ws.onmessage = (event) => {
     const data = JSON.parse(event.data);
+    console.log('Received message:', data);
     
     switch(data.type) {
       case 'init':
@@ -714,37 +726,52 @@ function initializeOnlineGame(mode) {
 
       case 'room_created':
         roomId = data.roomId;
+        currentRoomId = data.roomId;
         // Display room code for other player to join
-        alert(`Room Code: ${roomId}`);
+        alert(`Your Room Code: ${roomId}\nShare this code with your opponent!`);
         break;
 
       case 'player_joined':
-        if (data.players === 2) {
-          // Both players are in, can start character selection
-          document.getElementById("character-select").style.display = "block";
+        if (data.success) {
+          alert('Successfully joined room!');
+          currentRoomId = data.roomId;
+        } else {
+          alert('Failed to join room. Please try again.');
         }
         break;
 
-      case 'start_game':
+      case 'game_start':
         // Start the game with received player data
         startOnlineGame(data.players);
         break;
 
       case 'game_update':
         // Update game state with received data
-        updateOnlineGameState(data.state);
+        if (data.state) {
+          updateOnlineGameState(data.state);
+        }
         break;
 
       case 'player_disconnected':
         alert("Other player disconnected!");
         window.location.reload();
         break;
+
+      case 'error':
+        alert(data.message);
+        break;
     }
   };
 
   ws.onclose = () => {
+    console.log('WebSocket connection closed');
     alert("Connection to server lost!");
     window.location.reload();
+  };
+
+  ws.onerror = (error) => {
+    console.error('WebSocket error:', error);
+    alert("Error connecting to server!");
   };
 }
 

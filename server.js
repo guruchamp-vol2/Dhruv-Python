@@ -16,17 +16,25 @@ wss.on('connection', (ws) => {
 
     console.log('New client connected');
 
+    // Send initial connection acknowledgment with player ID
+    playerId = Math.random().toString(36).substring(2, 10);
+    ws.send(JSON.stringify({
+        type: 'init',
+        playerId: playerId
+    }));
+
     ws.on('message', (message) => {
         const data = JSON.parse(message);
+        console.log('Received message:', data);
         
         switch(data.type) {
             case 'create_room':
                 roomId = Math.random().toString(36).substring(2, 8);
                 gameRooms.set(roomId, {
-                    players: [{ ws, id: data.playerId }],
+                    players: [{ ws, id: playerId }],
+                    gameMode: data.gameMode,
                     gameState: {}
                 });
-                playerId = data.playerId;
                 ws.send(JSON.stringify({ type: 'room_created', roomId }));
                 console.log(`Room created: ${roomId}`);
                 break;
@@ -36,14 +44,16 @@ wss.on('connection', (ws) => {
                     const room = gameRooms.get(data.roomId);
                     if (room.players.length < 2) {
                         roomId = data.roomId;
-                        playerId = data.playerId;
                         room.players.push({ ws, id: playerId });
                         
                         // Notify both players that game can start
                         room.players.forEach(player => {
                             player.ws.send(JSON.stringify({
                                 type: 'game_start',
-                                players: room.players.map(p => p.id)
+                                players: room.players.map(p => ({ 
+                                    id: p.id,
+                                    isHost: p === room.players[0]
+                                }))
                             }));
                         });
                         console.log(`Player joined room: ${roomId}`);
@@ -59,14 +69,14 @@ wss.on('connection', (ws) => {
                 if (roomId && gameRooms.has(roomId)) {
                     const room = gameRooms.get(roomId);
                     // Update game state
-                    room.gameState = { ...room.gameState, ...data.gameState };
+                    room.gameState = { ...room.gameState, ...data.state };
                     
                     // Broadcast to other player
                     room.players.forEach(player => {
                         if (player.id !== playerId) {
                             player.ws.send(JSON.stringify({
                                 type: 'game_update',
-                                gameState: data.gameState
+                                state: data.state
                             }));
                         }
                     });
