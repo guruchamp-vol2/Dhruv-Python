@@ -1,7 +1,7 @@
 // WebSocket URL configuration
 const WEBSOCKET_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
   ? 'ws://localhost:8001'
-  : 'wss://fighting-game-server-production.up.railway.app';
+  : 'wss://dhruv-python-production.up.railway.app';
 
 // --- Character Setup ---
 const characters = [
@@ -57,7 +57,6 @@ document.getElementById("game-mode").addEventListener("change", (e) => {
   gameMode = e.target.value;
   console.log('Game mode changed to:', gameMode);
   
-  // Show/hide AI controls based on game mode
   if (gameMode === "coop" || gameMode === "moderncoop") {
     document.getElementById("ai-toggle").checked = true;
     document.getElementById("ai-toggle").disabled = true;
@@ -80,40 +79,37 @@ document.getElementById("game-mode").addEventListener("change", (e) => {
     document.getElementById("ai-health").style.display = "none";
     
     // Check if WebSocket server is available
-    fetch('https://fighting-game-server-production.up.railway.app')
-      .then(response => {
-        if (response.ok) {
-          const hostGame = confirm("Do you want to host the game?");
-          isHost = hostGame;
-          isOnlineGame = true;
-          
-          if (hostGame) {
-            initializeOnlineGame(gameMode);
-          } else {
-            const code = prompt("Enter room code:");
-            if (code) {
-              initializeOnlineGame(gameMode);
-              setTimeout(() => {
-                ws.send(JSON.stringify({
-                  type: 'join_room',
-                  roomId: code
-                }));
-              }, 1000);
-            }
-          }
-        } else {
-          alert("Online mode is in development. Please use local multiplayer for now!");
-          // Reset to default mode
-          document.getElementById("game-mode").value = "versus";
-          gameMode = "versus";
+    const wsTest = new WebSocket(WEBSOCKET_URL);
+    
+    wsTest.onopen = () => {
+      wsTest.close(); // Close test connection
+      const hostGame = confirm("Do you want to host the game?");
+      isHost = hostGame;
+      isOnlineGame = true;
+      
+      if (hostGame) {
+        initializeOnlineGame(gameMode);
+      } else {
+        const code = prompt("Enter room code:");
+        if (code) {
+          initializeOnlineGame(gameMode);
+          setTimeout(() => {
+            ws.send(JSON.stringify({
+              type: 'join_room',
+              roomId: code
+            }));
+          }, 1000);
         }
-      })
-      .catch(() => {
-        alert("Online mode is in development. Please use local multiplayer for now!");
-        // Reset to default mode
-        document.getElementById("game-mode").value = "versus";
-        gameMode = "versus";
-      });
+      }
+    };
+    
+    wsTest.onerror = () => {
+      console.error('WebSocket server not available');
+      alert("Online mode is currently unavailable. Please try again later or use local multiplayer for now.");
+      // Reset to default mode
+      document.getElementById("game-mode").value = "versus";
+      gameMode = "versus";
+    };
   }
   validateStart();
 });
@@ -780,7 +776,7 @@ function initializeOnlineGame(mode) {
           case 'room_created':
             roomId = data.roomId;
             currentRoomId = data.roomId;
-            alert(`Your Room Code: ${roomId}\nShare this code with your opponent!`);
+            displayMessage(`Room created! Room ID: ${roomId}`);
             console.log('Room created:', roomId);
             break;
 
@@ -796,35 +792,45 @@ function initializeOnlineGame(mode) {
             break;
 
           case 'player_disconnected':
-            alert("Other player disconnected!");
+            displayMessage("Other player disconnected!");
             console.log('Other player disconnected');
-            window.location.reload();
+            setTimeout(() => {
+              window.location.reload();
+            }, 3000);
             break;
 
           case 'error':
-            alert(data.message);
+            displayMessage(data.message);
             console.error('Server error:', data.message);
             break;
         }
       } catch (error) {
         console.error('Error processing message:', error);
-        alert('Error processing game data. Please try again.');
+        displayMessage('Error processing game data. Please try again.');
       }
     };
 
     ws.onclose = (event) => {
       console.log('WebSocket connection closed:', event);
-      alert("Connection to server lost! Please refresh the page.");
-      window.location.reload();
+      displayMessage("Connection to server lost! Please refresh the page.");
+      setTimeout(() => {
+        window.location.reload();
+      }, 3000);
     };
 
     ws.onerror = (error) => {
       console.error('WebSocket error:', error);
-      alert("Error connecting to game server! Please try again later.");
+      displayMessage("Error connecting to game server! Please try again later.");
+      // Reset game mode to versus
+      document.getElementById("game-mode").value = "versus";
+      gameMode = "versus";
     };
   } catch (error) {
     console.error('Error initializing WebSocket:', error);
-    alert('Failed to connect to game server. Please try again later.');
+    displayMessage('Failed to connect to game server. Please try again later.');
+    // Reset game mode to versus
+    document.getElementById("game-mode").value = "versus";
+    gameMode = "versus";
   }
 }
 
@@ -914,52 +920,94 @@ function gameLoop() {
 }
 
 function initializeWebSocket() {
-    ws = new WebSocket(WEBSOCKET_URL);
+    console.log('Attempting to connect to WebSocket server at:', WEBSOCKET_URL);
     
-    ws.onopen = () => {
-        console.log('Connected to game server');
-    };
-    
-    ws.onerror = (error) => {
-        console.error('WebSocket error:', error);
-        displayMessage('Connection error! Please try again later.');
-    };
-    
-    ws.onmessage = (event) => {
-        const data = JSON.parse(event.data);
+    try {
+        ws = new WebSocket(WEBSOCKET_URL);
         
-        switch(data.type) {
-            case 'room_created':
-                currentRoomId = data.roomId;
-                displayMessage(`Room created! Room ID: ${data.roomId}`);
-                break;
+        ws.onopen = () => {
+            console.log('Successfully connected to WebSocket server');
+            document.getElementById("game-mode").querySelector('option[value="onlineclassic"]').disabled = false;
+            document.getElementById("game-mode").querySelector('option[value="onlinemodern"]').disabled = false;
+            
+            // Send initial connection message
+            ws.send(JSON.stringify({
+                type: 'init'
+            }));
+        };
+        
+        ws.onerror = (error) => {
+            console.error('WebSocket connection error:', error);
+            handleWebSocketError();
+        };
+        
+        ws.onmessage = (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                console.log('Received message:', data);
                 
-            case 'game_start':
-                isOnlineGame = true;
-                startOnlineGame(data.players);
-                break;
-                
-            case 'game_update':
-                if (isOnlineGame) {
-                    handleOnlineGameUpdate(data.gameState);
+                switch(data.type) {
+                    case 'room_created':
+                        currentRoomId = data.roomId;
+                        displayMessage(`Room created! Room ID: ${data.roomId}`);
+                        break;
+                        
+                    case 'game_start':
+                        isOnlineGame = true;
+                        startOnlineGame(data.players);
+                        break;
+                        
+                    case 'game_update':
+                        if (isOnlineGame && data.gameState) {
+                            handleOnlineGameUpdate(data.gameState);
+                        }
+                        break;
+                        
+                    case 'player_disconnected':
+                        displayMessage('Other player disconnected');
+                        resetGame();
+                        break;
+                        
+                    case 'error':
+                        displayMessage(data.message);
+                        console.error('Server error:', data.message);
+                        break;
                 }
-                break;
-                
-            case 'player_disconnected':
-                displayMessage('Other player disconnected');
-                resetGame();
-                break;
-                
-            case 'error':
-                displayMessage(data.message);
-                break;
-        }
-    };
+            } catch (error) {
+                console.error('Error processing message:', error);
+                displayMessage('Error processing game data');
+            }
+        };
+        
+        ws.onclose = (event) => {
+            console.log('WebSocket connection closed:', event);
+            if (isOnlineGame) {
+                displayMessage("Connection to server lost! Please refresh the page.");
+                setTimeout(() => {
+                    window.location.reload();
+                }, 3000);
+            } else {
+                handleWebSocketError();
+            }
+        };
+        
+    } catch (error) {
+        console.error('Failed to initialize WebSocket:', error);
+        handleWebSocketError();
+    }
+}
+
+function handleWebSocketError() {
+    // Disable online modes when WebSocket is not available
+    document.getElementById("game-mode").querySelector('option[value="onlineclassic"]').disabled = true;
+    document.getElementById("game-mode").querySelector('option[value="onlinemodern"]').disabled = true;
     
-    ws.onclose = () => {
-        console.log('Disconnected from game server');
-        isOnlineGame = false;
-    };
+    // If currently in online mode, switch to classic
+    if (gameMode === "onlineclassic" || gameMode === "onlinemodern") {
+        document.getElementById("game-mode").value = "versus";
+        gameMode = "versus";
+        displayMessage("Online mode is currently unavailable. Please try again later.");
+    }
 }
 
 function createRoom() {
