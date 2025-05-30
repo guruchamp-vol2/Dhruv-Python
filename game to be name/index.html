@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=800, initial-scale=1.0"/>
+  <title>2D Fighting Game</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="character-select">
+    <h2>Select Characters</h2>
+    <div id="mode-select" style="margin-bottom:20px;">
+      <label><strong>Mode:</strong></label>
+      <select id="game-mode">
+        <option value="versus" selected>Classic</option>
+        <option value="coop">Classic Co-op</option>
+        <option value="modern">Modern</option>
+        <option value="moderncoop">Modern Co-op</option>
+        <option value="online">Online (Beta)</option>
+      </select>
+    </div>
+    <div class="player-label">Player 1</div>
+    <div id="p1-characters" class="character-row"></div>
+    <div class="player-label">Player 2</div>
+    <div id="p2-characters" class="character-row"></div>
+    <div class="player-label">AI Player</div>
+    <div id="ai-characters" class="character-row"></div>
+    <div style="margin:10px 0;">
+      <label><strong>AI Opponent:</strong></label>
+      <input type="checkbox" id="ai-toggle" checked>
+      <label for="ai-toggle">AI ON</label>
+    </div>
+    <div style="margin: 10px 0;">
+      <label for="ai-difficulty"><strong>AI Difficulty:</strong></label>
+      <select id="ai-difficulty">
+        <option value="easy">Easy</option>
+        <option value="medium" selected>Medium</option>
+        <option value="hard">Hard</option>
+      </select>
+    </div>
+    <button id="start-game" disabled>Start Game</button>
+  </div>
+
+  <div id="game-screen" style="display: none; position: relative; width: 800px; height: 400px;">
+    <canvas id="gameCanvas" width="800" height="400"></canvas>
+    <div id="hud">
+      <div>
+        <div id="p1-health"></div>
+        <div id="p1-energy-bar" class="energy-bar-bg"><div id="p1-energy" class="energy-bar-fill"></div></div>
+      </div>
+      <div>
+        <div id="ai-health"></div>
+        <div id="ai-energy-bar" class="energy-bar-bg"><div id="ai-energy" class="energy-bar-fill"></div></div>
+      </div>
+      <div>
+        <div id="p2-health"></div>
+        <div id="p2-energy-bar" class="energy-bar-bg"><div id="p2-energy" class="energy-bar-fill"></div></div>
+      </div>
+    </div>
+    <div id="game-over" style="display: none; font-size: 32px; color: red; text-align: center; margin-top: 20px; position:absolute; top:50%; left:0;width:100%;"></div>
+  </div>
+  <div id="game-over-screen" style="display: none;"></div>
+  <script src="script.js"></script>
+</body>
+</html>
