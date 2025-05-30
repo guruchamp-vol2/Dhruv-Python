@@ -27,6 +27,11 @@ let isHost = false;
 let currentRoomId = null;
 let isOnlineGame = false;
 
+// Add this at the top of your file
+const WEBSOCKET_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? 'ws://localhost:8001'
+    : 'wss://dhruv-python-production.up.railway.app';  // Railway URL
+
 // --- Character Select UI ---
 document.getElementById("game-mode").addEventListener("change", (e) => {
   gameMode = e.target.value;
@@ -691,7 +696,7 @@ function updateEnergyBars() {
 
 // Add this function after your existing code
 function initializeOnlineGame(mode) {
-  ws = new WebSocket('ws://localhost:8001');
+  ws = new WebSocket(WEBSOCKET_URL);
   
   ws.onopen = () => {
     console.log('Connected to server');
@@ -833,13 +838,7 @@ function gameLoop() {
 }
 
 function initializeWebSocket() {
-    // Check if we're running locally or online
-    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    const wsUrl = isLocalhost ? 
-        'ws://localhost:8001' : 
-        'wss://your-app-name.up.railway.app';  // Replace with your Railway app URL
-    
-    ws = new WebSocket(wsUrl);
+    ws = new WebSocket(WEBSOCKET_URL);
     
     ws.onopen = () => {
         console.log('Connected to game server');
