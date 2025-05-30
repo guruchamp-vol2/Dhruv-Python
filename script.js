@@ -34,22 +34,22 @@ let isOnlineGame = false;
 
 // Add a mapping for case-sensitive filenames
 const characterImages = {
-  mario: 'mario.png',
-  luigi: 'luigi.png',
-  kirby: 'kirby.png',
-  sonic: 'sonic.png',
-  tails: 'Tails.png',
-  shadow: 'shadow.png',
-  toriel: 'toriel.png',
-  sans: 'sans.png',
-  mettaton: 'Mettaton.png',
-  kris: 'kris.png',
-  susie: 'susie.png',
-  jevil: 'jevil.png',
-  spadeking: 'spadeking.png',
-  berdly: 'berdly.png',
-  noelle: 'noelle.png',
-  spamton: 'spamton.png'
+  mario: "mario.png",
+  luigi: "luigi.png",
+  kirby: "kirby.png",
+  sonic: "sonic.png",
+  tails: "Tails.png",
+  shadow: "shadow.png",
+  toriel: "toriel.png",
+  sans: "sans.png",
+  mettaton: "Mettaton.png",
+  kris: "kris.png",
+  susie: "susie.png",
+  jevil: "jevil.png",
+  spadeking: "spadeking.png",
+  berdly: "berdly.png",
+  noelle: "noelle.png",
+  spamton: "spamton.png"
 };
 
 // --- Character Select UI ---
