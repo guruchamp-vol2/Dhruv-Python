@@ -1,0 +1,211 @@
+body {
+  font-family: 'Segoe UI', 'Roboto', Arial, sans-serif;
+  background: linear-gradient(135deg, #2b0a3d 0%, #1a1f3c 100%);
+  color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 0;
+  padding: 40px;
+  min-height: 100vh;
+}
+#character-select {
+  text-align: center;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 30px;
+  border-radius: 15px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(10px);
+  margin-bottom: 30px;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+#character-select::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    45deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.1) 50%,
+    transparent 100%
+  );
+  animation: shine 3s infinite;
+  pointer-events: none;
+}
+@keyframes shine {
+  0% {
+    transform: translateX(-100%) translateY(-100%) rotate(45deg);
+  }
+  100% {
+    transform: translateX(100%) translateY(100%) rotate(45deg);
+  }
+}
+.character-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 20px;
+  margin-bottom: 25px;
+}
+.character-row img {
+  width: 85px;
+  height: 85px;
+  cursor: pointer;
+  border: 3px solid transparent;
+  background: #fff;
+  object-fit: cover;
+  border-radius: 15px;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  filter: brightness(0.8);
+}
+.character-row img:hover {
+  transform: scale(1.1);
+  filter: brightness(1.2);
+  box-shadow: 0 0 20px rgba(255, 255, 255, 0.4);
+}
+.character-row img.selected {
+  border: 3px solid #ff3d00;
+  filter: brightness(1.2);
+  box-shadow: 0 0 25px rgba(255, 61, 0, 0.6);
+  animation: pulse 2s infinite;
+}
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 25px rgba(255, 61, 0, 0.6);
+  }
+  50% {
+    box-shadow: 0 0 35px rgba(255, 61, 0, 0.8);
+  }
+  100% {
+    box-shadow: 0 0 25px rgba(255, 61, 0, 0.6);
+  }
+}
+.player-label {
+  font-weight: bold;
+  margin: 20px 0;
+  font-size: 1.4em;
+  color: #ff3d00;
+  text-transform: uppercase;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+  letter-spacing: 2px;
+}
+#start-game {
+  background: linear-gradient(45deg, #ff3d00, #ff9100);
+  color: white;
+  padding: 15px 40px;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  border-radius: 30px;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(255, 61, 0, 0.4);
+  position: relative;
+  overflow: hidden;
+}
+#start-game::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    45deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.2) 50%,
+    transparent 100%
+  );
+  transform: translateX(-100%) translateY(-100%) rotate(45deg);
+  transition: 0.5s;
+}
+#start-game:hover::before {
+  transform: translateX(100%) translateY(100%) rotate(45deg);
+}
+#start-game:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 20px rgba(255, 61, 0, 0.6);
+}
+#start-game:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+canvas {
+  border: 3px solid rgba(255, 61, 0, 0.3);
+  border-radius: 15px;
+  background-color: #1a1f3c;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+#hud {
+  position: absolute;
+  top: 20px;
+  left: 0;
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  z-index: 10;
+  pointer-events: none;
+  padding: 0 20px;
+  box-sizing: border-box;
+}
+#hud > div {
+  background: rgba(26, 31, 60, 0.9);
+  padding: 15px 20px;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(5px);
+  min-width: 200px;
+  border: 2px solid rgba(255, 61, 0, 0.3);
+  position: relative;
+  overflow: hidden;
+}
+#hud #p1-health, #hud #p2-health, #hud #ai-health {
+  font-weight: bold;
+  margin-bottom: 8px;
+  color: #ffffff;
+  font-size: 20px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+.energy-bar-bg {
+  background: rgba(0, 0, 0, 0.4);
+  border: 2px solid rgba(255, 61, 0, 0.3);
+  width: 180px;
+  height: 15px;
+  margin: 4px 0 10px 0;
+  border-radius: 8px;
+  overflow: hidden;
+  position: relative;
+}
+.energy-bar-fill {
+  background: linear-gradient(90deg, #ff3d00, #ff9100);
+  height: 100%;
+  width: 100%;
+  transition: width 0.3s ease-out;
+  box-shadow: 0 0 15px rgba(255, 61, 0, 0.4);
+  position: relative;
+}
+.energy-bar-fill::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 50%;
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.2),
+    transparent
+  );
+}
