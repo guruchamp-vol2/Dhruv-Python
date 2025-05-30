@@ -4,6 +4,27 @@ const characters = [
   "toriel", "sans", "mettaton", "kris", "susie",
   "jevil", "spadeking", "berdly", "noelle", "spamton"
 ];
+
+// Add a mapping for case-sensitive filenames
+const characterImages = {
+  mario: "Mario.png",
+  luigi: "Luigi.png",
+  kirby: "Kirby.png",
+  sonic: "Sonic.png",
+  tails: "Tails.png",
+  shadow: "Shadow.png",
+  toriel: "Toriel.png",
+  sans: "Sans.png",
+  mettaton: "Mettaton.png",
+  kris: "Kris.png",
+  susie: "Susie.png",
+  jevil: "Jevil.png",
+  spadeking: "SpadeKing.png",
+  berdly: "Berdly.png",
+  noelle: "Noelle.png",
+  spamton: "Spamton.png"
+};
+
 const cooldowns = {
   mario: 750, luigi: 750, kirby: 750, sonic: 750, tails: 750,
   shadow: 500, toriel: 750, sans: 500, mettaton: 1250,
@@ -35,6 +56,8 @@ const WEBSOCKET_URL = window.location.hostname === 'localhost' || window.locatio
 // --- Character Select UI ---
 document.getElementById("game-mode").addEventListener("change", (e) => {
   gameMode = e.target.value;
+  console.log('Game mode changed to:', gameMode);
+  
   if (gameMode === "coop" || gameMode === "moderncoop") {
     document.getElementById("ai-toggle").checked = true;
     document.getElementById("ai-toggle").disabled = true;
@@ -45,6 +68,7 @@ document.getElementById("game-mode").addEventListener("change", (e) => {
   } else if (gameMode === "versus" || gameMode === "modern") {
     document.getElementById("ai-toggle").disabled = false;
   } else if (gameMode === "onlineclassic" || gameMode === "onlinemodern") {
+    console.log('Initializing online mode...');
     document.getElementById("ai-toggle").checked = false;
     document.getElementById("ai-toggle").disabled = true;
     aiEnabled = false;
@@ -55,15 +79,19 @@ document.getElementById("game-mode").addEventListener("change", (e) => {
     const hostGame = confirm("Do you want to host the game?");
     isHost = hostGame;
     isOnlineGame = true;
+    console.log('Is host?', isHost);
     
     if (hostGame) {
+      console.log('Creating new room...');
       initializeOnlineGame(gameMode);
     } else {
       const code = prompt("Enter room code:");
       if (code) {
+        console.log('Joining room:', code);
         initializeOnlineGame(gameMode);
         // Join existing room after connection is established
         setTimeout(() => {
+          console.log('Sending join room request...');
           ws.send(JSON.stringify({
             type: 'join_room',
             roomId: code
@@ -91,7 +119,7 @@ const aiContainer = document.getElementById("ai-characters");
 characters.forEach(char => {
   function createChar(container, selectFn) {
     const img = document.createElement("img");
-    img.src = `images/${char}.png`;
+    img.src = `images/${characterImages[char]}`;
     img.alt = char;
     img.addEventListener("click", () => selectFn(char, img));
     container.appendChild(img);
@@ -698,6 +726,7 @@ function updateEnergyBars() {
 
 // Online Game Functions
 function initializeOnlineGame(mode) {
+  console.log('Connecting to WebSocket server:', WEBSOCKET_URL);
   ws = new WebSocket(WEBSOCKET_URL);
   
   ws.onopen = () => {
@@ -715,8 +744,10 @@ function initializeOnlineGame(mode) {
     switch(data.type) {
       case 'init':
         playerId = data.playerId;
+        console.log('Received player ID:', playerId);
         // Create a new room if host
         if (isHost) {
+          console.log('Creating room...');
           ws.send(JSON.stringify({
             type: 'create_room',
             gameMode: mode
@@ -729,19 +760,23 @@ function initializeOnlineGame(mode) {
         currentRoomId = data.roomId;
         // Display room code for other player to join
         alert(`Your Room Code: ${roomId}\nShare this code with your opponent!`);
+        console.log('Room created:', roomId);
         break;
 
       case 'player_joined':
         if (data.success) {
           alert('Successfully joined room!');
           currentRoomId = data.roomId;
+          console.log('Joined room:', currentRoomId);
         } else {
           alert('Failed to join room. Please try again.');
+          console.error('Failed to join room:', data.message);
         }
         break;
 
       case 'game_start':
         // Start the game with received player data
+        console.log('Starting game with players:', data.players);
         startOnlineGame(data.players);
         break;
 
@@ -754,11 +789,13 @@ function initializeOnlineGame(mode) {
 
       case 'player_disconnected':
         alert("Other player disconnected!");
+        console.log('Other player disconnected');
         window.location.reload();
         break;
 
       case 'error':
         alert(data.message);
+        console.error('Server error:', data.message);
         break;
     }
   };

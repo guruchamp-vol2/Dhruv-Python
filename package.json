@@ -1,7 +1,7 @@
 {
-  "name": "fighting-game",
+  "name": "fighting-game-server",
   "version": "1.0.0",
-  "description": "2D Fighting Game with Online Multiplayer",
+  "description": "WebSocket server for the fighting game",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
@@ -10,6 +10,6 @@
     "ws": "^8.13.0"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=16.0.0"
   }
 } 

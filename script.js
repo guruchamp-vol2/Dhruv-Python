@@ -1,3 +1,8 @@
+// Add this at the top of your file
+const WEBSOCKET_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? 'ws://localhost:8001'
+    : 'wss://dhruv-python-production.up.railway.app';  // Updated Railway URL
+
 // --- Character Setup ---
 const characters = [
   "mario", "luigi", "kirby", "sonic", "tails", "shadow",
@@ -27,10 +32,25 @@ let isHost = false;
 let currentRoomId = null;
 let isOnlineGame = false;
 
-// Add this at the top of your file
-const WEBSOCKET_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-    ? 'ws://localhost:8001'
-    : 'wss://dhruv-python-production.up.railway.app';  // Railway URL
+// Add a mapping for case-sensitive filenames
+const characterImages = {
+  mario: "Mario.png",
+  luigi: "Luigi.png",
+  kirby: "Kirby.png",
+  sonic: "Sonic.png",
+  tails: "Tails.png",
+  shadow: "Shadow.png",
+  toriel: "Toriel.png",
+  sans: "Sans.png",
+  mettaton: "Mettaton.png",
+  kris: "Kris.png",
+  susie: "Susie.png",
+  jevil: "Jevil.png",
+  spadeking: "SpadeKing.png",
+  berdly: "Berdly.png",
+  noelle: "Noelle.png",
+  spamton: "Spamton.png"
+};
 
 // --- Character Select UI ---
 document.getElementById("game-mode").addEventListener("change", (e) => {
@@ -693,61 +713,87 @@ function updateEnergyBars() {
 
 // Add this function after your existing code
 function initializeOnlineGame(mode) {
-  ws = new WebSocket(WEBSOCKET_URL);
+  console.log('Initializing online game...');
+  console.log('Connecting to WebSocket server:', WEBSOCKET_URL);
   
-  ws.onopen = () => {
-    console.log('Connected to server');
-  };
-
-  ws.onmessage = (event) => {
-    const data = JSON.parse(event.data);
+  try {
+    ws = new WebSocket(WEBSOCKET_URL);
     
-    switch(data.type) {
-      case 'init':
-        playerId = data.playerId;
-        // Create a new room if host
-        if (isHost) {
-          ws.send(JSON.stringify({
-            type: 'create_room',
-            gameMode: mode
-          }));
+    ws.onopen = () => {
+      console.log('Successfully connected to server');
+      // Send initial connection message
+      ws.send(JSON.stringify({
+        type: 'init'
+      }));
+    };
+
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        console.log('Received message:', data);
+        
+        switch(data.type) {
+          case 'init':
+            playerId = data.playerId;
+            console.log('Received player ID:', playerId);
+            if (isHost) {
+              console.log('Creating room as host...');
+              ws.send(JSON.stringify({
+                type: 'create_room',
+                gameMode: mode
+              }));
+            }
+            break;
+
+          case 'room_created':
+            roomId = data.roomId;
+            currentRoomId = data.roomId;
+            alert(`Your Room Code: ${roomId}\nShare this code with your opponent!`);
+            console.log('Room created:', roomId);
+            break;
+
+          case 'game_start':
+            console.log('Starting game with players:', data.players);
+            startOnlineGame(data.players);
+            break;
+
+          case 'game_update':
+            if (data.state) {
+              updateOnlineGameState(data.state);
+            }
+            break;
+
+          case 'player_disconnected':
+            alert("Other player disconnected!");
+            console.log('Other player disconnected');
+            window.location.reload();
+            break;
+
+          case 'error':
+            alert(data.message);
+            console.error('Server error:', data.message);
+            break;
         }
-        break;
+      } catch (error) {
+        console.error('Error processing message:', error);
+        alert('Error processing game data. Please try again.');
+      }
+    };
 
-      case 'room_created':
-        roomId = data.roomId;
-        // Display room code for other player to join
-        alert(`Room Code: ${roomId}`);
-        break;
+    ws.onclose = (event) => {
+      console.log('WebSocket connection closed:', event);
+      alert("Connection to server lost! Please refresh the page.");
+      window.location.reload();
+    };
 
-      case 'player_joined':
-        if (data.players === 2) {
-          // Both players are in, can start character selection
-          document.getElementById("character-select").style.display = "block";
-        }
-        break;
-
-      case 'start_game':
-        // Start the game with received player data
-        startOnlineGame(data.players);
-        break;
-
-      case 'game_update':
-        // Update game state with received data
-        updateOnlineGameState(data.state);
-        break;
-
-      case 'player_disconnected':
-        alert("Other player disconnected!");
-        window.location.reload();
-        break;
-    }
-  };
-
-  ws.onclose = () => {
-    alert("Connection to server lost!");
-    window.location.reload();
-  };
+    ws.onerror = (error) => {
+      console.error('WebSocket error:', error);
+      alert("Error connecting to game server! Please try again later.");
+    };
+  } catch (error) {
+    console.error('Error initializing WebSocket:', error);
+    alert('Failed to connect to game server. Please try again later.');
+  }
 }
 
 function startOnlineGame(players) {
