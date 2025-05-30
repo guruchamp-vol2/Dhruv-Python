@@ -1,7 +1,7 @@
 // WebSocket URL configuration
 const WEBSOCKET_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
   ? 'ws://localhost:8001'
-  : 'wss://dhruv-python-production.up.railway.app';
+  : 'wss://fighting-game-server-production.up.railway.app';
 
 // --- Character Setup ---
 const characters = [
@@ -38,11 +38,11 @@ const characterImages = {
   luigi: "luigi.png",
   kirby: "kirby.png",
   sonic: "sonic.png",
-  tails: "Tails.png",
+  tails: "tails.png",
   shadow: "shadow.png",
   toriel: "toriel.png",
   sans: "sans.png",
-  mettaton: "Mettaton.png",
+  mettaton: "mettaton.png",
   kris: "kris.png",
   susie: "susie.png",
   jevil: "jevil.png",
@@ -55,6 +55,9 @@ const characterImages = {
 // --- Character Select UI ---
 document.getElementById("game-mode").addEventListener("change", (e) => {
   gameMode = e.target.value;
+  console.log('Game mode changed to:', gameMode);
+  
+  // Show/hide AI controls based on game mode
   if (gameMode === "coop" || gameMode === "moderncoop") {
     document.getElementById("ai-toggle").checked = true;
     document.getElementById("ai-toggle").disabled = true;
@@ -64,26 +67,53 @@ document.getElementById("game-mode").addEventListener("change", (e) => {
     document.getElementById("ai-health").style.display = "block";
   } else if (gameMode === "versus" || gameMode === "modern") {
     document.getElementById("ai-toggle").disabled = false;
+    document.getElementById("ai-characters").style.display = aiEnabled ? "flex" : "none";
+    document.getElementById("ai-difficulty").disabled = !aiEnabled;
+    document.getElementById("ai-health").style.display = aiEnabled ? "block" : "none";
   } else if (gameMode === "onlineclassic" || gameMode === "onlinemodern") {
-    const hostGame = confirm("Do you want to host the game?");
-    isHost = hostGame;
-    isOnlineGame = true;
+    // Online mode setup
+    document.getElementById("ai-toggle").checked = false;
+    document.getElementById("ai-toggle").disabled = true;
+    aiEnabled = false;
+    document.getElementById("ai-characters").style.display = "none";
+    document.getElementById("ai-difficulty").disabled = true;
+    document.getElementById("ai-health").style.display = "none";
     
-    if (hostGame) {
-      initializeOnlineGame(gameMode);
-    } else {
-      const code = prompt("Enter room code:");
-      if (code) {
-        initializeOnlineGame(gameMode);
-        // Join existing room after connection is established
-        setTimeout(() => {
-          ws.send(JSON.stringify({
-            type: 'join_room',
-            roomId: code
-          }));
-        }, 1000);
-      }
-    }
+    // Check if WebSocket server is available
+    fetch('https://fighting-game-server-production.up.railway.app')
+      .then(response => {
+        if (response.ok) {
+          const hostGame = confirm("Do you want to host the game?");
+          isHost = hostGame;
+          isOnlineGame = true;
+          
+          if (hostGame) {
+            initializeOnlineGame(gameMode);
+          } else {
+            const code = prompt("Enter room code:");
+            if (code) {
+              initializeOnlineGame(gameMode);
+              setTimeout(() => {
+                ws.send(JSON.stringify({
+                  type: 'join_room',
+                  roomId: code
+                }));
+              }, 1000);
+            }
+          }
+        } else {
+          alert("Online mode is in development. Please use local multiplayer for now!");
+          // Reset to default mode
+          document.getElementById("game-mode").value = "versus";
+          gameMode = "versus";
+        }
+      })
+      .catch(() => {
+        alert("Online mode is in development. Please use local multiplayer for now!");
+        // Reset to default mode
+        document.getElementById("game-mode").value = "versus";
+        gameMode = "versus";
+      });
   }
   validateStart();
 });
