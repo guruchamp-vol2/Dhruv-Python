@@ -1,7 +1,23 @@
 // WebSocket URL configuration
-const WEBSOCKET_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-  ? 'ws://localhost:8001'
-  : 'wss://dhruv-python-production.up.railway.app';
+const WEBSOCKET_URL = (() => {
+  const hostname = window.location.hostname;
+  const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
+  const port = isLocalhost ? 8081 : ''; // Updated port to 8081
+  const protocol = isLocalhost ? 'ws' : 'wss';
+  // Use the actual Railway URL for production
+  if (!isLocalhost) {
+    return 'wss://fighting-game-server-production.up.railway.app';
+  }
+  return `${protocol}://${hostname}${port ? `:${port}` : ''}`;
+})();
+
+// For debugging
+console.log('WebSocket URL:', WEBSOCKET_URL);
+
+let ws = null;
+let wsRetryCount = 0;
+const MAX_RETRIES = 3;
+const RETRY_DELAY = 1000;
 
 // --- Character Setup ---
 const characters = [
@@ -23,7 +39,6 @@ let gameMode = "versus";
 const MODERN_LIVES = 3;
 
 // Add these variables at the top of your file
-let ws = null;
 let playerId = null;
 let roomId = null;
 let isHost = false;
@@ -32,17 +47,17 @@ let isHost = false;
 let currentRoomId = null;
 let isOnlineGame = false;
 
-// Add a mapping for case-sensitive filenames
+// Update the character images mapping to match actual filenames
 const characterImages = {
   mario: "mario.png",
   luigi: "luigi.png",
   kirby: "kirby.png",
   sonic: "sonic.png",
-  tails: "tails.png",
+  tails: "Tails.png",
   shadow: "shadow.png",
   toriel: "toriel.png",
   sans: "sans.png",
-  mettaton: "mettaton.png",
+  mettaton: "Mettaton.png",
   kris: "kris.png",
   susie: "susie.png",
   jevil: "jevil.png",
@@ -51,6 +66,38 @@ const characterImages = {
   noelle: "noelle.png",
   spamton: "spamton.png"
 };
+
+// Initialize image objects
+const p1Img = new Image();
+const p2Img = new Image();
+const aiImg = new Image();
+
+// Add error handling for image loading
+function loadCharacterImage(char) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      console.log(`Successfully loaded image for ${char} from ${img.src}`);
+      resolve(img);
+    };
+    img.onerror = (error) => {
+      console.error(`Failed to load image for ${char}:`, error);
+      console.log(`Attempted to load from: images/${characterImages[char]}`);
+      // Try lowercase version as fallback
+      const fallbackImg = new Image();
+      fallbackImg.onload = () => {
+        console.log(`Successfully loaded fallback image for ${char}`);
+        resolve(fallbackImg);
+      };
+      fallbackImg.onerror = () => {
+        console.error(`Failed to load fallback image for ${char}`);
+        reject(error);
+      };
+      fallbackImg.src = `images/${char.toLowerCase()}.png`;
+    };
+    img.src = `images/${characterImages[char]}`;
+  });
+}
 
 // --- Character Select UI ---
 document.getElementById("game-mode").addEventListener("change", (e) => {
@@ -78,11 +125,14 @@ document.getElementById("game-mode").addEventListener("change", (e) => {
     document.getElementById("ai-difficulty").disabled = true;
     document.getElementById("ai-health").style.display = "none";
     
-    // Check if WebSocket server is available
+    // Test WebSocket connection before proceeding
+    console.log('Testing WebSocket connection...');
     const wsTest = new WebSocket(WEBSOCKET_URL);
     
     wsTest.onopen = () => {
-      wsTest.close(); // Close test connection
+      console.log('Connection test successful');
+      wsTest.close();
+      
       const hostGame = confirm("Do you want to host the game?");
       isHost = hostGame;
       isOnlineGame = true;
@@ -99,14 +149,17 @@ document.getElementById("game-mode").addEventListener("change", (e) => {
               roomId: code
             }));
           }, 1000);
+        } else {
+          // If no code provided, revert to versus mode
+          document.getElementById("game-mode").value = "versus";
+          gameMode = "versus";
         }
       }
     };
     
     wsTest.onerror = () => {
       console.error('WebSocket server not available');
-      alert("Online mode is currently unavailable. Please try again later or use local multiplayer for now.");
-      // Reset to default mode
+      displayMessage("Online mode is currently unavailable. Please try again later.");
       document.getElementById("game-mode").value = "versus";
       gameMode = "versus";
     };
@@ -127,14 +180,25 @@ document.getElementById("ai-toggle").addEventListener("change", e => {
 const p1Container = document.getElementById("p1-characters");
 const p2Container = document.getElementById("p2-characters");
 const aiContainer = document.getElementById("ai-characters");
+
 characters.forEach(char => {
   function createChar(container, selectFn) {
     const img = document.createElement("img");
-    img.src = `images/${characterImages[char]}`;
+    img.onerror = (error) => {
+      console.error(`Failed to load image for ${char} in selection screen:`, error);
+      console.log(`Attempted to load from: images/${characterImages[char]}`);
+      // Try lowercase version as fallback
+      img.src = `images/${char.toLowerCase()}.png`;
+    };
+    img.onload = () => console.log(`Successfully loaded selection image for ${char}: ${img.src}`);
+    const imagePath = `images/${characterImages[char]}`;
+    console.log(`Attempting to load selection image for ${char} from: ${imagePath}`);
+    img.src = imagePath;
     img.alt = char;
     img.addEventListener("click", () => selectFn(char, img));
     container.appendChild(img);
   }
+  
   createChar(p1Container, (char, img) => selectCharacter(1, char, img));
   createChar(p2Container, (char, img) => selectCharacter(2, char, img));
   createChar(aiContainer, selectAICharacter);
@@ -170,7 +234,6 @@ function validateStart() {
 let canvas = null, ctx = null;
 let p1, p2, ai, keys = {}, projectiles = [];
 const groundY = 300, gravity = 1;
-const p1Img = new Image(), p2Img = new Image(), aiImg = new Image();
 let p1LastAttack = 0, p2LastAttack = 0, aiLastAttack = 0, gameEnded = false;
 
 document.addEventListener("keydown", e => {
@@ -214,141 +277,178 @@ function getCurrentTarget() {
 
 function startGame() {
   document.getElementById("game-over").style.display = "none";
-  p1Img.src = `images/${characterImages[p1Char]}`;
-  p2Img.src = `images/${characterImages[p2Char]}`;
-  if ((aiEnabled || gameMode === "coop" || gameMode === "moderncoop" || gameMode === "modern") && aiChar) {
-    aiImg.src = `images/${characterImages[aiChar]}`;
-  }
-
-  if (isModernMode()) {
-    p1 = makeModernPlayer(100, 300, "right");
-    p2 = makeModernPlayer(600, 300, "left");
-    ai = makeModernPlayer(350, 300, "left");
-  } else {
-    p1 = { x: 100, y: 300, health: 1000, vy: 0, facing: "right", energy: 0, knockback: 0, knockbackDir: 0 };
-    p2 = { x: 600, y: 300, health: 1000, vy: 0, facing: "left", energy: 0, knockback: 0, knockbackDir: 0 };
-    ai = { x: 350, y: 300, health: 1000, vy: 0, facing: "left", energy: 0, knockback: 0, knockbackDir: 0 };
-  }
-  projectiles = [];
-  gameEnded = false;
-  p1LastAttack = 0; p2LastAttack = 0; aiLastAttack = 0;
+  document.getElementById("game-screen").style.display = "block";
+  
+  // Initialize canvas first
   canvas = document.getElementById("gameCanvas");
   ctx = canvas.getContext("2d");
-  requestAnimationFrame(gameLoop);
+  
+  // Load character images with error handling
+  function loadGameImage(char) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        console.log(`Successfully loaded image for ${char} from ${img.src}`);
+        resolve(img);
+      };
+      img.onerror = (error) => {
+        console.error(`Failed to load image for ${char}:`, error);
+        console.log(`Attempted to load from: images/${characterImages[char]}`);
+        reject(error);
+      };
+      img.src = `images/${characterImages[char]}`;
+    });
+  }
+
+  // Load all required images
+  Promise.all([
+    loadGameImage(p1Char),
+    loadGameImage(p2Char),
+    ...(((aiEnabled || gameMode === "coop" || gameMode === "moderncoop" || gameMode === "modern") && aiChar) ? [loadGameImage(aiChar)] : [])
+  ]).then(([p1LoadedImg, p2LoadedImg, aiLoadedImg]) => {
+    console.log("All character images loaded successfully");
+    p1Img.src = p1LoadedImg.src;
+    p2Img.src = p2LoadedImg.src;
+    if (aiLoadedImg) {
+      aiImg.src = aiLoadedImg.src;
+    }
+    
+    // Initialize game state
+    projectiles = [];
+    gameEnded = false;
+    p1LastAttack = 0;
+    p2LastAttack = 0;
+    aiLastAttack = 0;
+
+    // Initialize players
+    if (isModernMode()) {
+      p1 = makeModernPlayer(100, 300, "right");
+      p2 = makeModernPlayer(600, 300, "left");
+      ai = makeModernPlayer(350, 300, "left");
+    } else {
+      p1 = { x: 100, y: 300, health: 1000, vy: 0, facing: "right", energy: 0, knockback: 0, knockbackDir: 0 };
+      p2 = { x: 600, y: 300, health: 1000, vy: 0, facing: "left", energy: 0, knockback: 0, knockbackDir: 0 };
+      ai = { x: 350, y: 300, health: 1000, vy: 0, facing: "left", energy: 0, knockback: 0, knockbackDir: 0 };
+    }
+
+    // Update HUD
+    document.getElementById("p1-health").textContent = isModernMode() ? `P1: ${p1.percent}% | Lives: ${p1.lives}` : `Player 1: ${p1.health}`;
+    document.getElementById("p2-health").textContent = isModernMode() ? `P2: ${p2.percent}% | Lives: ${p2.lives}` : `Player 2: ${p2.health}`;
+    if (aiEnabled || gameMode === "coop" || gameMode === "moderncoop" || gameMode === "modern") {
+      document.getElementById("ai-health").textContent = isModernMode() ? `AI: ${ai.percent}% | Lives: ${ai.lives}` : `AI: ${ai.health}`;
+    }
+    updateEnergyBars();
+    
+    // Start game loop
+    requestAnimationFrame(gameLoop);
+  }).catch(error => {
+    console.error("Failed to load game images:", error);
+    alert("Failed to load character images. Please check the console for details.");
+  });
 }
 
-function gameLoop() {
+function gameLoop(timestamp) {
   if (gameEnded) return;
+  
+  const now = Date.now();
+  
+  // Clear canvas
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  const now = performance.now();
-
+  
+  // Draw background
+  const bgImg = document.getElementById("fight-background");
+  if (bgImg) {
+    ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
+  }
+  
+  // Update game state based on mode
   if (isModernMode()) {
-    if (!p1.isOut && p1.lives > 0) movePlayerModern(p1, ["a", "d", "w"]);
-    if (!p2.isOut && p2.lives > 0) movePlayerModern(p2, ["ArrowLeft", "ArrowRight", "ArrowUp"]);
-    applyGravity(p1); applyGravity(p2);
+    // Modern mode updates
+    if (!p1.isOut && p1.lives > 0) {
+      movePlayer(p1, ["a", "d", "w"]);
+      applyGravity(p1);
+    }
+    if (!p2.isOut && p2.lives > 0) {
+      movePlayer(p2, ["ArrowLeft", "ArrowRight", "ArrowUp"]);
+      applyGravity(p2);
+    }
+    
+    // AI updates for modern mode
     if ((aiEnabled || gameMode === "moderncoop" || gameMode === "modern") && !ai.isOut && ai.lives > 0) {
-      handleAIModern(ai, now);
+      handleAI(ai, now);
       applyGravity(ai);
     }
-    checkOutOfBounds(p1, 100, 300);
-    checkOutOfBounds(p2, 600, 300);
-    checkOutOfBounds(ai, 350, 300);
-
-    if (!p1.isOut && p1.lives > 0 && keys["e"] && now - p1LastAttack >= cooldowns[p1Char]) {
-      performAttackModern(p1, p1Char, 1);
-      p1LastAttack = now;
-    }
-    if (!p2.isOut && p2.lives > 0 && keys["l"] && now - p2LastAttack >= cooldowns[p2Char]) {
-      performAttackModern(p2, p2Char, 2);
-      p2LastAttack = now;
-    }
-
-    moveProjectilesModern();
-
-    if (!p1.isOut && p1.lives > 0) ctx.drawImage(p1Img, p1.x, p1.y, 100, 100);
-    if (!p2.isOut && p2.lives > 0) ctx.drawImage(p2Img, p2.x, p2.y, 100, 100);
-    if ((aiEnabled || gameMode === "moderncoop" || gameMode === "modern") && !ai.isOut && ai.lives > 0) ctx.drawImage(aiImg, ai.x, ai.y, 100, 100);
-
-    document.getElementById("p1-health").textContent = `P1: ${p1.percent}% | Lives: ${p1.lives}`;
-    document.getElementById("p2-health").textContent = `P2: ${p2.percent}% | Lives: ${p2.lives}`;
-    document.getElementById("ai-health").textContent =
-      (aiEnabled || gameMode === "moderncoop" || gameMode === "modern") ? `AI: ${ai.percent}% | Lives: ${ai.lives}` : "";
-
-    updateEnergyBars();
-
-    // Win/Lose logic
-    if (gameMode === "modern") {
-      let alive = [p1, p2, ai].filter(p => !p.isOut && p.lives > 0);
-      if (alive.length <= 1) {
-        let winner = p1.lives > 0 ? "Player 1" : p2.lives > 0 ? "Player 2" : "AI";
-        showGameOver(winner);
-        return;
+    
+    // Draw characters with proper checks
+    try {
+      if (!p1.isOut && p1.lives > 0 && p1Img.complete) {
+        ctx.drawImage(p1Img, p1.x, p1.y, 100, 100);
       }
-    } else if (gameMode === "moderncoop") {
-      if (ai.lives <= 0 || ai.isOut) {
-        showGameOver("You win!");
-        return;
+      if (!p2.isOut && p2.lives > 0 && p2Img.complete) {
+        ctx.drawImage(p2Img, p2.x, p2.y, 100, 100);
       }
-      if ((p1.lives <= 0 || p1.isOut) && (p2.lives <= 0 || p2.isOut)) {
-        showGameOver("You lose!");
-        return;
+      if ((aiEnabled || gameMode === "moderncoop" || gameMode === "modern") && !ai.isOut && ai.lives > 0 && aiImg.complete) {
+        ctx.drawImage(aiImg, ai.x, ai.y, 100, 100);
       }
+    } catch (error) {
+      console.error("Error drawing characters:", error);
     }
+    
+    // Draw projectiles
+    projectiles.forEach(proj => {
+      ctx.fillStyle = proj.color;
+      ctx.fillRect(proj.x, proj.y, proj.size, proj.size);
+    });
+    
+    // Move projectiles
+    moveProjectiles();
+    
+    // Request next frame
     requestAnimationFrame(gameLoop);
-    return;
-  }
-
-  if (p1.health > 0) movePlayer(p1, ["a", "d", "w"]);
-  if (p2.health > 0) movePlayer(p2, ["ArrowLeft", "ArrowRight", "ArrowUp"]);
-  applyGravity(p1); applyGravity(p2);
-
-  if ((aiEnabled || gameMode === "coop") && ai.health > 0) {
-    handleAI(ai, now);
-    applyGravity(ai);
-  }
-
-  if (p1.health > 0 && keys["e"] && now - p1LastAttack >= cooldowns[p1Char]) {
-    performAttack(p1, p1Char, 1);
-    p1LastAttack = now;
-  }
-  if (p2.health > 0 && keys["l"] && now - p2LastAttack >= cooldowns[p2Char]) {
-    performAttack(p2, p2Char, 2);
-    p2LastAttack = now;
-  }
-
-  moveProjectiles();
-
-  if (p1.health > 0) ctx.drawImage(p1Img, p1.x, p1.y, 100, 100);
-  if (p2.health > 0) ctx.drawImage(p2Img, p2.x, p2.y, 100, 100);
-  if ((aiEnabled || gameMode === "coop") && ai.health > 0) ctx.drawImage(aiImg, ai.x, ai.y, 100, 100);
-
-  document.getElementById("p1-health").textContent = `Player 1: ${Math.max(0, p1.health)}`;
-  document.getElementById("p2-health").textContent = `Player 2: ${Math.max(0, p2.health)}`;
-  document.getElementById("ai-health").textContent = (aiEnabled || gameMode === "coop") ? `AI: ${Math.max(0, ai.health)}` : "";
-
-  updateEnergyBars();
-
-  if (gameMode === "versus") {
-    const alive = [];
-    if (p1.health > 0) alive.push("Player 1");
-    if (p2.health > 0) alive.push("Player 2");
-    if ((aiEnabled || gameMode === "coop") && ai.health > 0) alive.push("AI");
-    if (alive.length === 1) {
-      showGameOver(alive[0]);
-      return;
+  } else {
+    // Classic mode updates
+    if (p1.health > 0) {
+      movePlayer(p1, ["a", "d", "w"]);
+      applyGravity(p1);
     }
-  } else if (gameMode === "coop") {
-    if ((aiEnabled || gameMode === "coop") && ai.health <= 0) {
-      showGameOver("win");
-      return;
+    if (p2.health > 0) {
+      movePlayer(p2, ["ArrowLeft", "ArrowRight", "ArrowUp"]);
+      applyGravity(p2);
     }
-    if (p1.health <= 0 && p2.health <= 0) {
-      showGameOver("lose");
-      return;
+    
+    // AI updates for classic mode
+    if ((aiEnabled || gameMode === "coop") && ai.health > 0) {
+      handleAI(ai, now);
+      applyGravity(ai);
     }
+    
+    // Draw characters with proper checks
+    try {
+      if (p1.health > 0 && p1Img.complete) {
+        ctx.drawImage(p1Img, p1.x, p1.y, 100, 100);
+      }
+      if (p2.health > 0 && p2Img.complete) {
+        ctx.drawImage(p2Img, p2.x, p2.y, 100, 100);
+      }
+      if ((aiEnabled || gameMode === "coop") && ai.health > 0 && aiImg.complete) {
+        ctx.drawImage(aiImg, ai.x, ai.y, 100, 100);
+      }
+    } catch (error) {
+      console.error("Error drawing characters:", error);
+    }
+    
+    // Draw projectiles
+    projectiles.forEach(proj => {
+      ctx.fillStyle = proj.color;
+      ctx.fillRect(proj.x, proj.y, proj.size, proj.size);
+    });
+    
+    // Move projectiles
+    moveProjectiles();
+    
+    // Request next frame
+    requestAnimationFrame(gameLoop);
   }
-  requestAnimationFrame(gameLoop);
 }
 
 // --- AI TARGETTING ---
@@ -441,9 +541,17 @@ function movePlayerModern(player, keysList) {
     if (Math.abs(player.knockback) < 1) player.knockback = 0;
     return;
   }
-  if (keys[keysList[0]]) { player.x -= 5; player.facing = "left"; }
-  if (keys[keysList[1]]) { player.x += 5; player.facing = "right"; }
-  if (keys[keysList[2]] && player.y === groundY) player.vy = -15;
+  if (keys[keysList[0]]) {
+    player.x = Math.max(-50, player.x - 5);
+    player.facing = "left";
+  }
+  if (keys[keysList[1]]) {
+    player.x = Math.min(canvas.width - 50, player.x + 5);
+    player.facing = "right";
+  }
+  if (keys[keysList[2]] && player.y === groundY) {
+    player.vy = -15;
+  }
 }
 function checkOutOfBounds(player, startX, startY) {
   if (player.isOut) return;
@@ -514,7 +622,13 @@ function moveProjectilesModern() {
     let hit = false;
     for (let i = 0; i < targets.length; i++) {
       if (checkCollision(p, targets[i]) && targets[i].lives > 0 && !targets[i].isOut) {
-        takeHitModern(targets[i], p.damage, p.vx > 0 ? 1 : -1, p.size >= 15 ? 25 : 10, (p.owner === 1) ? p1 : (p.owner === 2) ? p2 : ai);
+        takeHitModern(
+          targets[i],
+          p.damage,
+          p.vx > 0 ? 1 : -1,
+          p.size >= 15 ? 25 : 10,
+          (p.owner === 1) ? p1 : (p.owner === 2) ? p2 : ai
+        );
         hit = true;
         break;
       }
@@ -598,10 +712,17 @@ function movePlayer(player, keysList) {
     player.x = Math.max(0, Math.min(canvas.width - 100, player.x));
     return;
   }
-  if (keys[keysList[0]]) { player.x -= 5; player.facing = "left"; }
-  if (keys[keysList[1]]) { player.x += 5; player.facing = "right"; }
-  if (keys[keysList[2]] && player.y === groundY) player.vy = -15;
-  player.x = Math.max(0, Math.min(canvas.width - 100, player.x));
+  if (keys[keysList[0]]) {
+    player.x = Math.max(0, player.x - 5);
+    player.facing = "left";
+  }
+  if (keys[keysList[1]]) {
+    player.x = Math.min(canvas.width - 100, player.x + 5);
+    player.facing = "right";
+  }
+  if (keys[keysList[2]] && player.y === groundY) {
+    player.vy = -15;
+  }
 }
 function applyGravity(player) {
   player.vy += gravity;
@@ -630,7 +751,21 @@ function performAttack(player, character, owner) {
   if (type === "gun") {
     shootProjectile(player, character, owner);
   } else {
-    targets.forEach(target => performMeleeAttack(player, target, type));
+    targets.forEach(target => {
+      const range = 100;
+      const inRange = (
+        target.x < player.x + range &&
+        target.x + 100 > player.x &&
+        Math.abs(target.y - player.y) < 50
+      );
+      if (inRange) {
+        target.health -= type === "sword" ? 30 : 20;
+        player.energy = Math.min(100, player.energy + 15);
+        target.energy = Math.min(100, target.energy + 8);
+        target.knockback = type === "sword" ? 14 : 10;
+        target.knockbackDir = target.x < player.x ? -1 : 1;
+      }
+    });
   }
 }
 function moveProjectiles() {
@@ -712,12 +847,20 @@ function getAttackType(char) {
   return sword.includes(char) ? "sword" : gun.includes(char) ? "gun" : "punch";
 }
 function checkCollision(proj, target) {
-  return (
-    proj.x > target.x &&
-    proj.x < target.x + 100 &&
-    proj.y > target.y &&
-    proj.y < target.y + 100
-  );
+  // Calculate the center of the projectile and target
+  const projCenterX = proj.x;
+  const projCenterY = proj.y;
+  const targetCenterX = target.x + 50;
+  const targetCenterY = target.y + 50;
+
+  // Calculate the distance between centers
+  const dx = projCenterX - targetCenterX;
+  const dy = projCenterY - targetCenterY;
+  const distance = Math.sqrt(dx * dx + dy * dy);
+
+  // Check if the distance is less than the sum of the radii
+  // (projectile radius + half target width)
+  return distance < (proj.size + 50);
 }
 function showGameOver(winner) {
   gameEnded = true;
@@ -741,97 +884,94 @@ function updateEnergyBars() {
 
 // Add this function after your existing code
 function initializeOnlineGame(mode) {
-  console.log('Initializing online game...');
   console.log('Connecting to WebSocket server:', WEBSOCKET_URL);
+  ws = new WebSocket(WEBSOCKET_URL);
   
-  try {
-    ws = new WebSocket(WEBSOCKET_URL);
+  ws.onopen = () => {
+    console.log('Connected to server');
+    // Send initial connection message
+    ws.send(JSON.stringify({
+      type: 'init'
+    }));
+  };
+
+  ws.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+    console.log('Received message:', data);
     
-    ws.onopen = () => {
-      console.log('Successfully connected to server');
-      // Send initial connection message
-      ws.send(JSON.stringify({
-        type: 'init'
-      }));
-    };
-
-    ws.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        console.log('Received message:', data);
-        
-        switch(data.type) {
-          case 'init':
-            playerId = data.playerId;
-            console.log('Received player ID:', playerId);
-            if (isHost) {
-              console.log('Creating room as host...');
-              ws.send(JSON.stringify({
-                type: 'create_room',
-                gameMode: mode
-              }));
-            }
-            break;
-
-          case 'room_created':
-            roomId = data.roomId;
-            currentRoomId = data.roomId;
-            displayMessage(`Room created! Room ID: ${roomId}`);
-            console.log('Room created:', roomId);
-            break;
-
-          case 'game_start':
-            console.log('Starting game with players:', data.players);
-            startOnlineGame(data.players);
-            break;
-
-          case 'game_update':
-            if (data.state) {
-              updateOnlineGameState(data.state);
-            }
-            break;
-
-          case 'player_disconnected':
-            displayMessage("Other player disconnected!");
-            console.log('Other player disconnected');
-            setTimeout(() => {
-              window.location.reload();
-            }, 3000);
-            break;
-
-          case 'error':
-            displayMessage(data.message);
-            console.error('Server error:', data.message);
-            break;
+    switch(data.type) {
+      case 'init':
+        playerId = data.playerId;
+        console.log('Received player ID:', playerId);
+        // Create a new room if host
+        if (isHost) {
+          console.log('Creating room...');
+          ws.send(JSON.stringify({
+            type: 'create_room',
+            gameMode: mode
+          }));
         }
-      } catch (error) {
-        console.error('Error processing message:', error);
-        displayMessage('Error processing game data. Please try again.');
-      }
-    };
+        break;
 
-    ws.onclose = (event) => {
-      console.log('WebSocket connection closed:', event);
-      displayMessage("Connection to server lost! Please refresh the page.");
-      setTimeout(() => {
-        window.location.reload();
-      }, 3000);
-    };
+      case 'room_created':
+        roomId = data.roomId;
+        currentRoomId = data.roomId;
+        // Display room code with enhanced visibility
+        displayMessage(`🎮 Room Code: ${roomId}\n\nShare this code with your opponent to join!\n\nWaiting for opponent...`, true);
+        console.log('Room created:', roomId);
+        break;
 
-    ws.onerror = (error) => {
-      console.error('WebSocket error:', error);
-      displayMessage("Error connecting to game server! Please try again later.");
-      // Reset game mode to versus
-      document.getElementById("game-mode").value = "versus";
-      gameMode = "versus";
-    };
-  } catch (error) {
-    console.error('Error initializing WebSocket:', error);
-    displayMessage('Failed to connect to game server. Please try again later.');
-    // Reset game mode to versus
-    document.getElementById("game-mode").value = "versus";
-    gameMode = "versus";
-  }
+      case 'player_joined':
+        if (data.success) {
+          displayMessage('Connected! Game starting soon...', false);
+          currentRoomId = data.roomId;
+          console.log('Joined room:', currentRoomId);
+        } else {
+          displayMessage('Failed to join room. Please check the code and try again.', false);
+          console.error('Failed to join room:', data.message);
+        }
+        break;
+
+      case 'game_start':
+        // Start the game with received player data
+        console.log('Starting game with players:', data.players);
+        startOnlineGame(data.players);
+        break;
+
+      case 'game_update':
+        // Update game state with received data
+        if (data.state) {
+          updateOnlineGameState(data.state);
+        }
+        break;
+
+      case 'player_disconnected':
+        displayMessage("Other player disconnected! Returning to menu...");
+        console.log('Other player disconnected');
+        setTimeout(() => {
+          window.location.reload();
+        }, 3000);
+        break;
+
+      case 'error':
+        displayMessage(data.message, false);
+        console.error('Server error:', data.message);
+        break;
+    }
+  };
+
+  ws.onclose = () => {
+    console.log('WebSocket connection closed');
+    displayMessage("Connection to server lost! Please refresh the page.", false);
+    setTimeout(() => {
+      window.location.reload();
+    }, 3000);
+  };
+
+  ws.onerror = (error) => {
+    console.error('WebSocket error:', error);
+    displayMessage("Error connecting to server! Please try again.", false);
+  };
 }
 
 function startOnlineGame(players) {
@@ -1049,27 +1189,48 @@ function handleOnlineGameUpdate(gameState) {
     }
 }
 
-function displayMessage(message) {
-    // Create or update message display element
+function displayMessage(message, isRoomCode = false) {
     let messageDiv = document.getElementById('message-display');
     if (!messageDiv) {
         messageDiv = document.createElement('div');
         messageDiv.id = 'message-display';
         messageDiv.style.position = 'fixed';
-        messageDiv.style.top = '20px';
+        messageDiv.style.top = '50%';
         messageDiv.style.left = '50%';
-        messageDiv.style.transform = 'translateX(-50%)';
-        messageDiv.style.padding = '10px 20px';
-        messageDiv.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+        messageDiv.style.transform = 'translate(-50%, -50%)';
+        messageDiv.style.padding = '20px 40px';
+        messageDiv.style.backgroundColor = 'rgba(0, 0, 0, 0.95)';
         messageDiv.style.color = 'white';
-        messageDiv.style.borderRadius = '5px';
+        messageDiv.style.borderRadius = '15px';
         messageDiv.style.zIndex = '1000';
+        messageDiv.style.fontSize = '28px';
+        messageDiv.style.fontWeight = 'bold';
+        messageDiv.style.textAlign = 'center';
+        messageDiv.style.whiteSpace = 'pre-line';
+        messageDiv.style.boxShadow = '0 0 20px rgba(255,255,255,0.3)';
         document.body.appendChild(messageDiv);
     }
-    messageDiv.textContent = message;
-    setTimeout(() => {
-        messageDiv.remove();
-    }, 3000);
+
+    if (isRoomCode) {
+        // Format room code to be more visible
+        const parts = message.split(currentRoomId);
+        messageDiv.innerHTML = parts[0] + 
+          `<span style="color: #00ff00; font-size: 42px; background: rgba(0,255,0,0.2); padding: 10px 20px; border-radius: 8px; margin: 10px 5px; display: block;">${currentRoomId}</span>` + 
+          parts[1];
+        // Keep room codes visible longer
+        setTimeout(() => {
+            if (messageDiv && messageDiv.parentNode) {
+                messageDiv.remove();
+            }
+        }, 10000); // 10 seconds for room codes
+    } else {
+        messageDiv.textContent = message;
+        setTimeout(() => {
+            if (messageDiv && messageDiv.parentNode) {
+                messageDiv.remove();
+            }
+        }, 5000); // 5 seconds for other messages
+    }
 }
 
 // Add UI elements for online gameplay

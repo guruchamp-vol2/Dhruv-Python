@@ -7,22 +7,22 @@ const characters = [
 
 // Add a mapping for case-sensitive filenames
 const characterImages = {
-  mario: "Mario.png",
-  luigi: "Luigi.png",
-  kirby: "Kirby.png",
-  sonic: "Sonic.png",
+  mario: "mario.png",
+  luigi: "luigi.png",
+  kirby: "kirby.png",
+  sonic: "sonic.png",
   tails: "Tails.png",
-  shadow: "Shadow.png",
-  toriel: "Toriel.png",
-  sans: "Sans.png",
+  shadow: "shadow.png",
+  toriel: "toriel.png",
+  sans: "sans.png",
   mettaton: "Mettaton.png",
-  kris: "Kris.png",
-  susie: "Susie.png",
-  jevil: "Jevil.png",
-  spadeking: "SpadeKing.png",
-  berdly: "Berdly.png",
-  noelle: "Noelle.png",
-  spamton: "Spamton.png"
+  kris: "kris.png",
+  susie: "susie.png",
+  jevil: "jevil.png",
+  spadeking: "spadeking.png",
+  berdly: "berdly.png",
+  noelle: "noelle.png",
+  spamton: "spamton.png"
 };
 
 const cooldowns = {
@@ -203,9 +203,11 @@ function getCurrentTarget() {
 
 function startGame() {
   document.getElementById("game-over").style.display = "none";
-  p1Img.src = `images/${p1Char}.png`;
-  p2Img.src = `images/${p2Char}.png`;
-  if ((aiEnabled || gameMode === "coop" || gameMode === "moderncoop" || gameMode === "modern") && aiChar) aiImg.src = `images/${aiChar}.png`;
+  p1Img.src = `images/${characterImages[p1Char]}`;
+  p2Img.src = `images/${characterImages[p2Char]}`;
+  if ((aiEnabled || gameMode === "coop" || gameMode === "moderncoop" || gameMode === "modern") && aiChar) {
+    aiImg.src = `images/${characterImages[aiChar]}`;
+  }
 
   if (isModernMode()) {
     p1 = makeModernPlayer(100, 300, "right");
@@ -828,9 +830,11 @@ function startOnlineGame(players) {
     p2 = makeModernPlayer(isPlayer1 ? 600 : 100, 300, isPlayer1 ? "left" : "right");
   }
   
-  // Set character images
-  p1Img.src = `images/${isPlayer1 ? players[0].character : players[1].character}.png`;
-  p2Img.src = `images/${isPlayer1 ? players[1].character : players[0].character}.png`;
+  // Set character images using the mapping
+  const p1Char = isPlayer1 ? players[0].character : players[1].character;
+  const p2Char = isPlayer1 ? players[1].character : players[0].character;
+  p1Img.src = `images/${characterImages[p1Char]}`;
+  p2Img.src = `images/${characterImages[p2Char]}`;
   
   gameLoop();
 }

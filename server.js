@@ -1,8 +1,11 @@
 const WebSocket = require('ws');
 const http = require('http');
 
-// Use the port provided by Railway or default to 8001
-const PORT = process.env.PORT || 8001;
+// Use the port provided by Railway or default to 8081
+const PORT = process.env.PORT || 8081;
+const HOST = process.env.HOST || '0.0.0.0';
+
+console.log('WebSocket server starting on port', PORT);
 
 // Create an HTTP server
 const server = http.createServer((req, res) => {
@@ -10,6 +13,7 @@ const server = http.createServer((req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
   
   if (req.method === 'OPTIONS') {
     res.writeHead(200);
@@ -21,38 +25,34 @@ const server = http.createServer((req, res) => {
   res.end('WebSocket server is running\n');
 });
 
-// Create WebSocket server attached to HTTP server
+// Create WebSocket server with optimized settings
 const wss = new WebSocket.Server({ 
   server,
+  perMessageDeflate: false,  // Disable compression for better performance
   clientTracking: true,
-  // Add WebSocket options
-  perMessageDeflate: {
-    zlibDeflateOptions: {
-      chunkSize: 1024,
-      memLevel: 7,
-      level: 3
-    },
-    zlibInflateOptions: {
-      chunkSize: 10 * 1024
-    },
-    clientNoContextTakeover: true,
-    serverNoContextTakeover: true,
-    serverMaxWindowBits: 10,
-    concurrencyLimit: 10,
-    threshold: 1024
+  verifyClient: (info) => {
+    console.log('Origin:', info.origin);
+    return true;  // Accept all connections
   }
 });
 
-console.log(`WebSocket server starting on port ${PORT}`);
+// Set server timeout
+server.timeout = 0;  // Disable timeout
+server.keepAliveTimeout = 0;  // Disable keep-alive timeout
 
 // Store active game rooms
 const gameRooms = new Map();
 
-wss.on('connection', (ws, req) => {
+wss.on('connection', (ws) => {
   console.log('New client connected');
-  let roomId = null;
-  let playerId = null;
+  
+  // Set WebSocket timeout
+  ws.isAlive = true;
+  ws.on('pong', () => {
+    ws.isAlive = true;
+  });
 
+  // Handle messages
   ws.on('message', (message) => {
     try {
       const data = JSON.parse(message);
@@ -60,69 +60,77 @@ wss.on('connection', (ws, req) => {
 
       switch (data.type) {
         case 'init':
-          playerId = Math.random().toString(36).substring(2, 8);
-          ws.send(JSON.stringify({
+          // Generate a unique player ID
+          const playerId = Math.random().toString(36).substring(2, 8);
+          ws.playerId = playerId;
+          ws.send(JSON.stringify({ 
             type: 'init',
-            playerId: playerId
+            playerId: playerId 
           }));
           break;
 
         case 'create_room':
-          roomId = Math.random().toString(36).substring(2, 5);
-          gameRooms.set(roomId, {
-            host: playerId,
-            players: [{ id: playerId, ws: ws }],
-            gameMode: data.gameMode
+          // Create a new room with a short, readable code
+          const roomId = Math.random().toString(36).substring(2, 7).toUpperCase();
+          gameRooms.set(roomId, { 
+            players: new Set([ws]),
+            gameMode: data.gameMode,
+            host: ws.playerId
           });
-          ws.send(JSON.stringify({
-            type: 'room_created',
+          ws.roomId = roomId;
+          console.log('Room created:', roomId);
+          ws.send(JSON.stringify({ 
+            type: 'room_created', 
             roomId: roomId
           }));
-          console.log('Room created:', roomId);
           break;
 
         case 'join_room':
+          // Join existing room
           const room = gameRooms.get(data.roomId);
-          if (!room) {
+          if (room) {
+            if (room.players.size >= 2) {
+              ws.send(JSON.stringify({
+                type: 'error',
+                message: 'Room is full'
+              }));
+              return;
+            }
+            room.players.add(ws);
+            ws.roomId = data.roomId;
+            
+            // Notify all players in room
+            room.players.forEach(player => {
+              player.send(JSON.stringify({
+                type: 'player_joined',
+                success: true,
+                roomId: data.roomId,
+                playerId: ws.playerId
+              }));
+            });
+          } else {
             ws.send(JSON.stringify({
               type: 'error',
               message: 'Room not found'
             }));
-            return;
           }
-          if (room.players.length >= 2) {
-            ws.send(JSON.stringify({
-              type: 'error',
-              message: 'Room is full'
-            }));
-            return;
-          }
-          roomId = data.roomId;
-          room.players.push({ id: playerId, ws: ws });
-          
-          // Notify both players that game can start
-          room.players.forEach(player => {
-            player.ws.send(JSON.stringify({
-              type: 'game_start',
-              players: room.players.map(p => ({ id: p.id }))
-            }));
-          });
           break;
 
         case 'game_update':
-          const currentRoom = gameRooms.get(roomId);
-          if (currentRoom) {
-            // Send update to other player
-            currentRoom.players
-              .filter(p => p.id !== playerId)
-              .forEach(player => {
-                if (player.ws.readyState === WebSocket.OPEN) {
-                  player.ws.send(JSON.stringify({
+          // Broadcast game updates to other players in room
+          if (ws.roomId) {
+            const currentRoom = gameRooms.get(ws.roomId);
+            if (currentRoom) {
+              currentRoom.players.forEach(player => {
+                if (player !== ws && player.readyState === WebSocket.OPEN) {
+                  player.send(JSON.stringify({
                     type: 'game_update',
+                    playerId: ws.playerId,
                     state: data.state
                   }));
                 }
               });
+            }
           }
           break;
       }
@@ -135,36 +143,47 @@ wss.on('connection', (ws, req) => {
     }
   });
 
+  // Handle disconnection
   ws.on('close', () => {
     console.log('Client disconnected');
-    if (roomId && gameRooms.has(roomId)) {
-      const room = gameRooms.get(roomId);
-      // Notify other player about disconnection
-      room.players
-        .filter(p => p.id !== playerId)
-        .forEach(player => {
-          if (player.ws.readyState === WebSocket.OPEN) {
-            player.ws.send(JSON.stringify({
-              type: 'player_disconnected'
+    if (ws.roomId) {
+      const room = gameRooms.get(ws.roomId);
+      if (room) {
+        room.players.delete(ws);
+        if (room.players.size === 0) {
+          gameRooms.delete(ws.roomId);
+          console.log('Room deleted:', ws.roomId);
+        } else {
+          // Notify remaining players
+          room.players.forEach(player => {
+            player.send(JSON.stringify({
+              type: 'player_left',
+              playerId: ws.playerId
             }));
-          }
-        });
-      // Clean up room
-      gameRooms.delete(roomId);
-      console.log('Room deleted:', roomId);
+          });
+        }
+      }
     }
   });
-
-  // Send initial connection success
-  ws.send(JSON.stringify({ type: 'connected' }));
 });
 
-// Handle server errors
-wss.on('error', (error) => {
-  console.error('WebSocket server error:', error);
+// Heartbeat to keep connections alive
+const interval = setInterval(() => {
+  wss.clients.forEach((ws) => {
+    if (ws.isAlive === false) {
+      console.log('Terminating inactive client');
+      return ws.terminate();
+    }
+    ws.isAlive = false;
+    ws.ping(() => {});
+  });
+}, 30000);
+
+wss.on('close', () => {
+  clearInterval(interval);
 });
 
 // Start the server
-server.listen(PORT, () => {
-  console.log(`WebSocket server is running on port ${PORT}`);
+server.listen(PORT, HOST, () => {
+  console.log('WebSocket server is running on port', PORT);
 }); 
