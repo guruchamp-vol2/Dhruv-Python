@@ -7,6 +7,11 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+  <!-- Preload game assets -->
+  <div style="display: none;">
+    <img id="fight-background" src="images/fight-background.jpg" alt="Fight Background">
+  </div>
+
   <div id="character-select">
     <h2>Select Characters</h2>
     <div id="mode-select" style="margin-bottom:20px;">
@@ -42,25 +47,26 @@
     <button id="start-game" disabled>Start Game</button>
   </div>
 
-  <div id="game-screen" style="display: none; position: relative; width: 800px; height: 400px;">
-    <canvas id="gameCanvas" width="800" height="400"></canvas>
+  <div id="game-screen" style="display: none;">
     <div id="hud">
-      <div>
-        <div id="p1-health"></div>
-        <div id="p1-energy-bar" class="energy-bar-bg"><div id="p1-energy" class="energy-bar-fill"></div></div>
-      </div>
-      <div>
-        <div id="ai-health"></div>
-        <div id="ai-energy-bar" class="energy-bar-bg"><div id="ai-energy" class="energy-bar-fill"></div></div>
-      </div>
-      <div>
-        <div id="p2-health"></div>
-        <div id="p2-energy-bar" class="energy-bar-bg"><div id="p2-energy" class="energy-bar-fill"></div></div>
+      <div id="p1-health">Player 1: 1000</div>
+      <div id="p2-health">Player 2: 1000</div>
+      <div id="ai-health">AI: 1000</div>
+      <div id="energy-bars">
+        <div id="p1-energy"></div>
+        <div id="p2-energy"></div>
+        <div id="ai-energy"></div>
       </div>
     </div>
-    <div id="game-over" style="display: none; font-size: 32px; color: red; text-align: center; margin-top: 20px; position:absolute; top:50%; left:0;width:100%;"></div>
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
   </div>
-  <div id="game-over-screen" style="display: none;"></div>
+
+  <div id="game-over" style="display: none;">
+    <h2>Game Over</h2>
+    <div id="winner-text"></div>
+    <button onclick="location.reload()">Play Again</button>
+  </div>
+
   <script src="script.js"></script>
 </body>
 </html>

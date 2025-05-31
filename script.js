@@ -47,7 +47,7 @@ let isHost = false;
 let currentRoomId = null;
 let isOnlineGame = false;
 
-// Update the character images mapping to match actual filenames
+// Add a mapping for case-sensitive filenames
 const characterImages = {
   mario: "mario.png",
   luigi: "luigi.png",
@@ -77,23 +77,13 @@ function loadCharacterImage(char) {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = () => {
-      console.log(`Successfully loaded image for ${char} from ${img.src}`);
+      console.log(`Successfully loaded image for ${char}: ${img.src}`);
       resolve(img);
     };
     img.onerror = (error) => {
       console.error(`Failed to load image for ${char}:`, error);
       console.log(`Attempted to load from: images/${characterImages[char]}`);
-      // Try lowercase version as fallback
-      const fallbackImg = new Image();
-      fallbackImg.onload = () => {
-        console.log(`Successfully loaded fallback image for ${char}`);
-        resolve(fallbackImg);
-      };
-      fallbackImg.onerror = () => {
-        console.error(`Failed to load fallback image for ${char}`);
-        reject(error);
-      };
-      fallbackImg.src = `images/${char.toLowerCase()}.png`;
+      reject(error);
     };
     img.src = `images/${characterImages[char]}`;
   });
@@ -277,34 +267,12 @@ function getCurrentTarget() {
 
 function startGame() {
   document.getElementById("game-over").style.display = "none";
-  document.getElementById("game-screen").style.display = "block";
-  
-  // Initialize canvas first
-  canvas = document.getElementById("gameCanvas");
-  ctx = canvas.getContext("2d");
   
   // Load character images with error handling
-  function loadGameImage(char) {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => {
-        console.log(`Successfully loaded image for ${char} from ${img.src}`);
-        resolve(img);
-      };
-      img.onerror = (error) => {
-        console.error(`Failed to load image for ${char}:`, error);
-        console.log(`Attempted to load from: images/${characterImages[char]}`);
-        reject(error);
-      };
-      img.src = `images/${characterImages[char]}`;
-    });
-  }
-
-  // Load all required images
   Promise.all([
-    loadGameImage(p1Char),
-    loadGameImage(p2Char),
-    ...(((aiEnabled || gameMode === "coop" || gameMode === "moderncoop" || gameMode === "modern") && aiChar) ? [loadGameImage(aiChar)] : [])
+    loadCharacterImage(p1Char),
+    loadCharacterImage(p2Char),
+    ...(((aiEnabled || gameMode === "coop" || gameMode === "moderncoop" || gameMode === "modern") && aiChar) ? [loadCharacterImage(aiChar)] : [])
   ]).then(([p1LoadedImg, p2LoadedImg, aiLoadedImg]) => {
     console.log("All character images loaded successfully");
     p1Img.src = p1LoadedImg.src;
@@ -320,6 +288,10 @@ function startGame() {
     p2LastAttack = 0;
     aiLastAttack = 0;
 
+    // Initialize canvas
+    canvas = document.getElementById("gameCanvas");
+    ctx = canvas.getContext("2d");
+
     // Initialize players
     if (isModernMode()) {
       p1 = makeModernPlayer(100, 300, "right");
@@ -331,18 +303,10 @@ function startGame() {
       ai = { x: 350, y: 300, health: 1000, vy: 0, facing: "left", energy: 0, knockback: 0, knockbackDir: 0 };
     }
 
-    // Update HUD
-    document.getElementById("p1-health").textContent = isModernMode() ? `P1: ${p1.percent}% | Lives: ${p1.lives}` : `Player 1: ${p1.health}`;
-    document.getElementById("p2-health").textContent = isModernMode() ? `P2: ${p2.percent}% | Lives: ${p2.lives}` : `Player 2: ${p2.health}`;
-    if (aiEnabled || gameMode === "coop" || gameMode === "moderncoop" || gameMode === "modern") {
-      document.getElementById("ai-health").textContent = isModernMode() ? `AI: ${ai.percent}% | Lives: ${ai.lives}` : `AI: ${ai.health}`;
-    }
-    updateEnergyBars();
-    
     // Start game loop
     requestAnimationFrame(gameLoop);
   }).catch(error => {
-    console.error("Failed to load game images:", error);
+    console.error("Failed to load character images. Please check the console for details.");
     alert("Failed to load character images. Please check the console for details.");
   });
 }
@@ -378,77 +342,74 @@ function gameLoop(timestamp) {
       handleAI(ai, now);
       applyGravity(ai);
     }
-    
-    // Draw characters with proper checks
-    try {
-      if (!p1.isOut && p1.lives > 0 && p1Img.complete) {
-        ctx.drawImage(p1Img, p1.x, p1.y, 100, 100);
-      }
-      if (!p2.isOut && p2.lives > 0 && p2Img.complete) {
-        ctx.drawImage(p2Img, p2.x, p2.y, 100, 100);
-      }
-      if ((aiEnabled || gameMode === "moderncoop" || gameMode === "modern") && !ai.isOut && ai.lives > 0 && aiImg.complete) {
-        ctx.drawImage(aiImg, ai.x, ai.y, 100, 100);
-      }
-    } catch (error) {
-      console.error("Error drawing characters:", error);
-    }
-    
-    // Draw projectiles
-    projectiles.forEach(proj => {
-      ctx.fillStyle = proj.color;
-      ctx.fillRect(proj.x, proj.y, proj.size, proj.size);
-    });
-    
-    // Move projectiles
-    moveProjectiles();
-    
-    // Request next frame
-    requestAnimationFrame(gameLoop);
   } else {
     // Classic mode updates
-    if (p1.health > 0) {
-      movePlayer(p1, ["a", "d", "w"]);
-      applyGravity(p1);
-    }
-    if (p2.health > 0) {
-      movePlayer(p2, ["ArrowLeft", "ArrowRight", "ArrowUp"]);
-      applyGravity(p2);
-    }
-    
-    // AI updates for classic mode
-    if ((aiEnabled || gameMode === "coop") && ai.health > 0) {
+    movePlayer(p1, ["a", "d", "w"]);
+    movePlayer(p2, ["ArrowLeft", "ArrowRight", "ArrowUp"]);
+    if (aiEnabled || gameMode === "coop") {
       handleAI(ai, now);
-      applyGravity(ai);
     }
-    
-    // Draw characters with proper checks
-    try {
-      if (p1.health > 0 && p1Img.complete) {
-        ctx.drawImage(p1Img, p1.x, p1.y, 100, 100);
-      }
-      if (p2.health > 0 && p2Img.complete) {
-        ctx.drawImage(p2Img, p2.x, p2.y, 100, 100);
-      }
-      if ((aiEnabled || gameMode === "coop") && ai.health > 0 && aiImg.complete) {
-        ctx.drawImage(aiImg, ai.x, ai.y, 100, 100);
-      }
-    } catch (error) {
-      console.error("Error drawing characters:", error);
-    }
-    
-    // Draw projectiles
-    projectiles.forEach(proj => {
-      ctx.fillStyle = proj.color;
-      ctx.fillRect(proj.x, proj.y, proj.size, proj.size);
-    });
-    
-    // Move projectiles
-    moveProjectiles();
-    
-    // Request next frame
-    requestAnimationFrame(gameLoop);
   }
+  
+  // Draw characters
+  if (p1Img && !p1.isOut) {
+    ctx.save();
+    if (p1.facing === "left") {
+      ctx.scale(-1, 1);
+      ctx.drawImage(p1Img, -p1.x - 50, p1.y - 50, 100, 100);
+    } else {
+      ctx.drawImage(p1Img, p1.x - 50, p1.y - 50, 100, 100);
+    }
+    ctx.restore();
+  }
+  
+  if (p2Img && !p2.isOut) {
+    ctx.save();
+    if (p2.facing === "left") {
+      ctx.scale(-1, 1);
+      ctx.drawImage(p2Img, -p2.x - 50, p2.y - 50, 100, 100);
+    } else {
+      ctx.drawImage(p2Img, p2.x - 50, p2.y - 50, 100, 100);
+    }
+    ctx.restore();
+  }
+  
+  if ((aiEnabled || gameMode === "coop" || gameMode === "moderncoop" || gameMode === "modern") && aiImg && !ai.isOut) {
+    ctx.save();
+    if (ai.facing === "left") {
+      ctx.scale(-1, 1);
+      ctx.drawImage(aiImg, -ai.x - 50, ai.y - 50, 100, 100);
+    } else {
+      ctx.drawImage(aiImg, ai.x - 50, ai.y - 50, 100, 100);
+    }
+    ctx.restore();
+  }
+  
+  // Draw projectiles
+  projectiles.forEach(proj => {
+    ctx.fillStyle = proj.color || "red";
+    ctx.fillRect(proj.x - 5, proj.y - 5, 10, 10);
+  });
+  
+  // Update HUD
+  if (isModernMode()) {
+    document.getElementById("p1-health").textContent = `P1: ${p1.percent}% | Lives: ${p1.lives}`;
+    document.getElementById("p2-health").textContent = `P2: ${p2.percent}% | Lives: ${p2.lives}`;
+    if (aiEnabled || gameMode === "coop" || gameMode === "moderncoop" || gameMode === "modern") {
+      document.getElementById("ai-health").textContent = `AI: ${ai.percent}% | Lives: ${ai.lives}`;
+    }
+  } else {
+    document.getElementById("p1-health").textContent = `Player 1: ${p1.health}`;
+    document.getElementById("p2-health").textContent = `Player 2: ${p2.health}`;
+    if (aiEnabled || gameMode === "coop") {
+      document.getElementById("ai-health").textContent = `AI: ${ai.health}`;
+    }
+  }
+  
+  updateEnergyBars();
+  
+  // Continue game loop
+  requestAnimationFrame(gameLoop);
 }
 
 // --- AI TARGETTING ---
