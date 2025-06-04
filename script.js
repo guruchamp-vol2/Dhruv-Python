@@ -58,112 +58,72 @@ const BASE_PATH = (() => {
 
 console.log('Using BASE_PATH:', BASE_PATH); // Debug log
 
-// Update characterImages mapping with correct paths and debug logging
+// Character image configuration
 const characterImages = {
-  mario: `${BASE_PATH}images/mario.png`,
-  luigi: `${BASE_PATH}images/luigi.png`,
-  kirby: `${BASE_PATH}images/kirby.png`,
-  sonic: `${BASE_PATH}images/sonic.png`,
-  tails: `${BASE_PATH}images/Tails.png`,
-  shadow: `${BASE_PATH}images/shadow.png`,
-  toriel: `${BASE_PATH}images/toriel.png`,
-  sans: `${BASE_PATH}images/sans.png`,
-  mettaton: `${BASE_PATH}images/Mettaton.png`,
-  kris: `${BASE_PATH}images/kris.png`,
-  susie: `${BASE_PATH}images/susie.png`,
-  jevil: `${BASE_PATH}images/jevil.png`,
-  spadeking: `${BASE_PATH}images/spadeking.png`,
-  berdly: `${BASE_PATH}images/berdly.png`,
-  noelle: `${BASE_PATH}images/noelle.png`,
-  spamton: `${BASE_PATH}images/spamton.png`
+  mario: "mario.png",
+  luigi: "luigi.png",
+  kirby: "kirby.png",
+  sonic: "sonic.png",
+  tails: "Tails.png",
+  shadow: "shadow.png",
+  toriel: "toriel.png",
+  sans: "sans.png",
+  mettaton: "Mettaton.png",
+  kris: "kris.png",
+  susie: "susie.png",
+  jevil: "jevil.png",
+  spadeking: "spadeking.png",
+  berdly: "berdly.png",
+  noelle: "noelle.png",
+  spamton: "spamton.png"
 };
 
-// Debug log all image paths
-Object.entries(characterImages).forEach(([char, path]) => {
-  console.log(`Image path for ${char}:`, path);
-});
-
-// Initialize image objects
-const p1Img = new Image();
-const p2Img = new Image();
-const aiImg = new Image();
-
-// Update loadCharacterImage function
+// Simple image loading function
 function loadCharacterImage(char) {
   return new Promise((resolve, reject) => {
     const img = new Image();
-    
-    img.onload = () => {
-      console.log(`✅ Successfully loaded image for ${char}:`, img.src);
-      resolve(img);
+    img.onload = () => resolve(img);
+    img.onerror = () => {
+      console.error(`Failed to load image for ${char}`);
+      // Create a colored placeholder
+      const canvas = document.createElement('canvas');
+      canvas.width = 80;
+      canvas.height = 80;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#cccccc';
+      ctx.fillRect(0, 0, 80, 80);
+      ctx.fillStyle = '#000000';
+      ctx.font = '14px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText(char, 40, 40);
+      
+      const placeholderImg = new Image();
+      placeholderImg.src = canvas.toDataURL();
+      resolve(placeholderImg);
     };
-    
-    img.onerror = (error) => {
-      console.error(`❌ Failed to load image for ${char} from ${img.src}:`, error);
-      
-      // Try direct path without BASE_PATH
-      const directPath = `images/${characterImages[char].split('/').pop()}`;
-      console.log(`🔄 Trying direct path for ${char}:`, directPath);
-      
-      const retryImg = new Image();
-      retryImg.onload = () => {
-        console.log(`✅ Successfully loaded image for ${char} using direct path:`, directPath);
-        resolve(retryImg);
-      };
-      
-      retryImg.onerror = () => {
-        console.error(`❌ Failed to load image for ${char} using direct path:`, directPath);
-        // Create a colored placeholder with the character name
-        const canvas = document.createElement('canvas');
-        canvas.width = 80;
-        canvas.height = 80;
-        const ctx = canvas.getContext('2d');
-        ctx.fillStyle = '#cccccc';
-        ctx.fillRect(0, 0, 80, 80);
-        ctx.fillStyle = '#000000';
-        ctx.font = '14px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText(char, 40, 40);
-        
-        const placeholderImg = new Image();
-        placeholderImg.src = canvas.toDataURL();
-        resolve(placeholderImg);
-      };
-      
-      retryImg.src = directPath;
-    };
-    
-    const imagePath = characterImages[char];
-    console.log(`🔄 Attempting to load image for ${char} from:`, imagePath);
-    img.src = imagePath;
+    img.src = `images/${characterImages[char]}`;
   });
 }
 
-// Update the character selection image loading
+// Update character selection UI
 function createCharacterSelectImage(char, container, selectFn) {
   const img = document.createElement("img");
   img.classList.add("character-select-img");
   img.alt = char;
-  img.title = char.charAt(0).toUpperCase() + char.slice(1);
+  img.title = char;
   
   // Show loading state
   img.src = 'data:image/svg+xml;charset=UTF-8,<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80"><rect width="80" height="80" fill="%23eee"/><text x="50%" y="50%" font-family="Arial" font-size="12" fill="%23666" text-anchor="middle">Loading...</text></svg>';
   
-  loadCharacterImage(char)
-    .then(loadedImg => {
-      img.src = loadedImg.src;
-    })
-    .catch(error => {
-      console.error(`Failed to load image for ${char}:`, error);
-      // Show error state
-      img.src = 'data:image/svg+xml;charset=UTF-8,<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80"><rect width="80" height="80" fill="%23ffeeee"/><text x="50%" y="50%" font-family="Arial" font-size="12" fill="%23ff0000" text-anchor="middle">Error</text></svg>';
-    });
+  loadCharacterImage(char).then(loadedImg => {
+    img.src = loadedImg.src;
+  });
   
   img.addEventListener("click", () => selectFn(char, img));
   container.appendChild(img);
 }
 
-// Update the character creation loop
+// Create character selection UI
 characters.forEach(char => {
   createCharacterSelectImage(char, p1Container, (char, img) => selectCharacter(1, char, img));
   createCharacterSelectImage(char, p2Container, (char, img) => selectCharacter(2, char, img));
