@@ -83,19 +83,35 @@ const p1Img = new Image();
 const p2Img = new Image();
 const aiImg = new Image();
 
-// Simple image loading function with robust error handling
+// Simple image loading function with base64 data
 function loadCharacterImage(char) {
   return new Promise((resolve, reject) => {
-    const img = new Image();
-    
-    img.onload = () => {
-      console.log(`Successfully loaded image for ${char}:`, img.src);
-      resolve(img);
-    };
-    
-    img.onerror = (error) => {
-      console.error(`Failed to load image for ${char} from:`, img.src);
-      
+    if (characterImageData[char]) {
+      const img = createImageFromBase64(characterImageData[char]);
+      img.onload = () => {
+        console.log(`Successfully loaded image for ${char}`);
+        resolve(img);
+      };
+      img.onerror = () => {
+        console.error(`Failed to load image for ${char}`);
+        // Create a colored placeholder
+        const canvas = document.createElement('canvas');
+        canvas.width = 80;
+        canvas.height = 80;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#cccccc';
+        ctx.fillRect(0, 0, 80, 80);
+        ctx.fillStyle = '#000000';
+        ctx.font = '14px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(char, 40, 40);
+        
+        const placeholderImg = new Image();
+        placeholderImg.src = canvas.toDataURL();
+        resolve(placeholderImg);
+      };
+    } else {
+      console.error(`No image data found for ${char}`);
       // Create a colored placeholder
       const canvas = document.createElement('canvas');
       canvas.width = 80;
@@ -111,13 +127,7 @@ function loadCharacterImage(char) {
       const placeholderImg = new Image();
       placeholderImg.src = canvas.toDataURL();
       resolve(placeholderImg);
-    };
-
-    // Try to load the image with the correct path
-    const filename = characterImages[char];
-    const imagePath = `images/${filename}`;
-    console.log(`Attempting to load ${char} from:`, imagePath);
-    img.src = imagePath;
+    }
   });
 }
 
