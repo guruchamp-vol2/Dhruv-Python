@@ -47,10 +47,18 @@ let isHost = false;
 let currentRoomId = null;
 let isOnlineGame = false;
 
-// Add base path handling for GitHub Pages
-const BASE_PATH = window.location.hostname.includes('github.io') ? '/Dhruv-Python/game%20to%20be%20name/' : '/';
+// Add base path handling for GitHub Pages with proper encoding
+const BASE_PATH = (() => {
+  const isGitHub = window.location.hostname.includes('github.io');
+  if (isGitHub) {
+    return '/Dhruv-Python/game%20to%20be%20name/';
+  }
+  return '/';
+})();
 
-// Update characterImages mapping with correct paths
+console.log('Using BASE_PATH:', BASE_PATH); // Debug log
+
+// Update characterImages mapping with correct paths and debug logging
 const characterImages = {
   mario: `${BASE_PATH}images/mario.png`,
   luigi: `${BASE_PATH}images/luigi.png`,
@@ -70,6 +78,11 @@ const characterImages = {
   spamton: `${BASE_PATH}images/spamton.png`
 };
 
+// Debug log all image paths
+Object.entries(characterImages).forEach(([char, path]) => {
+  console.log(`Image path for ${char}:`, path);
+});
+
 // Initialize image objects
 const p1Img = new Image();
 const p2Img = new Image();
@@ -79,173 +92,84 @@ const aiImg = new Image();
 function loadCharacterImage(char) {
   return new Promise((resolve, reject) => {
     const img = new Image();
+    
     img.onload = () => {
-      console.log(`Successfully loaded image for ${char}: ${img.src}`);
+      console.log(`✅ Successfully loaded image for ${char}:`, img.src);
       resolve(img);
     };
+    
     img.onerror = (error) => {
-      console.error(`Failed to load image for ${char}:`, error);
-      // Try different case variations as fallback
-      const fallbackPaths = [
-        `${BASE_PATH}images/${char.toLowerCase()}.png`,
-        `${BASE_PATH}images/${char.toUpperCase()}.png`,
-        `${BASE_PATH}images/${char.charAt(0).toUpperCase() + char.slice(1)}.png`
-      ];
+      console.error(`❌ Failed to load image for ${char} from ${img.src}:`, error);
       
-      let fallbackIndex = 0;
-      function tryFallback() {
-        if (fallbackIndex < fallbackPaths.length) {
-          console.log(`Trying fallback path for ${char}: ${fallbackPaths[fallbackIndex]}`);
-          img.src = fallbackPaths[fallbackIndex];
-          fallbackIndex++;
-        } else {
-          // If all fallbacks fail, show a placeholder
-          img.src = 'data:image/svg+xml;charset=UTF-8,<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><rect width="40" height="40" fill="%23ccc"/></svg>';
-          console.error(`Could not load any image variation for ${char}`);
-          resolve(img); // Resolve with placeholder instead of rejecting
-        }
-      }
+      // Try direct path without BASE_PATH
+      const directPath = `images/${characterImages[char].split('/').pop()}`;
+      console.log(`🔄 Trying direct path for ${char}:`, directPath);
       
-      img.onerror = tryFallback;
-      tryFallback();
-    };
-    img.src = characterImages[char];
-  });
-}
-
-// --- Character Select UI ---
-document.getElementById("game-mode").addEventListener("change", (e) => {
-  gameMode = e.target.value;
-  console.log('Game mode changed to:', gameMode);
-  
-  if (gameMode === "coop" || gameMode === "moderncoop") {
-    document.getElementById("ai-toggle").checked = true;
-    document.getElementById("ai-toggle").disabled = true;
-    aiEnabled = true;
-    document.getElementById("ai-characters").style.display = "flex";
-    document.getElementById("ai-difficulty").disabled = false;
-    document.getElementById("ai-health").style.display = "block";
-  } else if (gameMode === "versus" || gameMode === "modern") {
-    document.getElementById("ai-toggle").disabled = false;
-    document.getElementById("ai-characters").style.display = aiEnabled ? "flex" : "none";
-    document.getElementById("ai-difficulty").disabled = !aiEnabled;
-    document.getElementById("ai-health").style.display = aiEnabled ? "block" : "none";
-  } else if (gameMode === "onlineclassic" || gameMode === "onlinemodern") {
-    // Online mode setup
-    document.getElementById("ai-toggle").checked = false;
-    document.getElementById("ai-toggle").disabled = true;
-    aiEnabled = false;
-    document.getElementById("ai-characters").style.display = "none";
-    document.getElementById("ai-difficulty").disabled = true;
-    document.getElementById("ai-health").style.display = "none";
-    
-    // Test WebSocket connection before proceeding
-    console.log('Testing WebSocket connection...');
-    const wsTest = new WebSocket(WEBSOCKET_URL);
-    
-    wsTest.onopen = () => {
-      console.log('Connection test successful');
-      wsTest.close();
+      const retryImg = new Image();
+      retryImg.onload = () => {
+        console.log(`✅ Successfully loaded image for ${char} using direct path:`, directPath);
+        resolve(retryImg);
+      };
       
-      const hostGame = confirm("Do you want to host the game?");
-      isHost = hostGame;
-      isOnlineGame = true;
+      retryImg.onerror = () => {
+        console.error(`❌ Failed to load image for ${char} using direct path:`, directPath);
+        // Create a colored placeholder with the character name
+        const canvas = document.createElement('canvas');
+        canvas.width = 80;
+        canvas.height = 80;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#cccccc';
+        ctx.fillRect(0, 0, 80, 80);
+        ctx.fillStyle = '#000000';
+        ctx.font = '14px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(char, 40, 40);
+        
+        const placeholderImg = new Image();
+        placeholderImg.src = canvas.toDataURL();
+        resolve(placeholderImg);
+      };
       
-      if (hostGame) {
-        initializeOnlineGame(gameMode);
-      } else {
-        const code = prompt("Enter room code:");
-        if (code) {
-          initializeOnlineGame(gameMode);
-          setTimeout(() => {
-            ws.send(JSON.stringify({
-              type: 'join_room',
-              roomId: code
-            }));
-          }, 1000);
-        } else {
-          // If no code provided, revert to versus mode
-          document.getElementById("game-mode").value = "versus";
-          gameMode = "versus";
-        }
-      }
-    };
-    
-    wsTest.onerror = () => {
-      console.error('WebSocket server not available');
-      displayMessage("Online mode is currently unavailable. Please try again later.");
-      document.getElementById("game-mode").value = "versus";
-      gameMode = "versus";
-    };
-  }
-  validateStart();
-});
-document.getElementById("ai-difficulty").addEventListener("change", e => {
-  aiDifficulty = e.target.value;
-});
-document.getElementById("ai-toggle").addEventListener("change", e => {
-  aiEnabled = e.target.checked;
-  document.getElementById("ai-characters").style.display = aiEnabled ? "flex" : "none";
-  document.getElementById("ai-difficulty").disabled = !aiEnabled;
-  document.getElementById("ai-health").style.display = aiEnabled ? "block" : "none";
-  validateStart();
-});
-
-const p1Container = document.getElementById("p1-characters");
-const p2Container = document.getElementById("p2-characters");
-const aiContainer = document.getElementById("ai-characters");
-
-characters.forEach(char => {
-  function createChar(container, selectFn) {
-    const img = document.createElement("img");
-    img.classList.add("character-select-img");
-    
-    // Preload the image
-    const preloadImg = new Image();
-    preloadImg.onload = () => {
-      img.src = preloadImg.src;
-      console.log(`Successfully loaded selection image for ${char}`);
-    };
-    preloadImg.onerror = (error) => {
-      console.error(`Failed to load image for ${char} in selection screen:`, error);
-      // Try different case variations
-      const fallbackPaths = [
-        `${BASE_PATH}images/${char.toLowerCase()}.png`,
-        `${BASE_PATH}images/${char.toUpperCase()}.png`,
-        `${BASE_PATH}images/${char.charAt(0).toUpperCase() + char.slice(1)}.png`
-      ];
-      
-      let fallbackIndex = 0;
-      function tryFallback() {
-        if (fallbackIndex < fallbackPaths.length) {
-          console.log(`Trying fallback path for ${char}: ${fallbackPaths[fallbackIndex]}`);
-          preloadImg.src = fallbackPaths[fallbackIndex];
-          fallbackIndex++;
-        } else {
-          // If all fallbacks fail, show a placeholder
-          img.src = 'data:image/svg+xml;charset=UTF-8,<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><rect width="40" height="40" fill="%23ccc"/></svg>';
-          console.error(`Could not load any image variation for ${char}`);
-        }
-      }
-      
-      preloadImg.onerror = tryFallback;
-      tryFallback();
+      retryImg.src = directPath;
     };
     
     const imagePath = characterImages[char];
-    console.log(`Attempting to load selection image for ${char} from: ${imagePath}`);
-    preloadImg.src = imagePath;
-    
-    img.alt = char;
-    img.title = char.charAt(0).toUpperCase() + char.slice(1); // Capitalize first letter
-    img.addEventListener("click", () => selectFn(char, img));
-    container.appendChild(img);
-  }
+    console.log(`🔄 Attempting to load image for ${char} from:`, imagePath);
+    img.src = imagePath;
+  });
+}
+
+// Update the character selection image loading
+function createCharacterSelectImage(char, container, selectFn) {
+  const img = document.createElement("img");
+  img.classList.add("character-select-img");
+  img.alt = char;
+  img.title = char.charAt(0).toUpperCase() + char.slice(1);
   
-  createChar(p1Container, (char, img) => selectCharacter(1, char, img));
-  createChar(p2Container, (char, img) => selectCharacter(2, char, img));
-  createChar(aiContainer, selectAICharacter);
+  // Show loading state
+  img.src = 'data:image/svg+xml;charset=UTF-8,<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80"><rect width="80" height="80" fill="%23eee"/><text x="50%" y="50%" font-family="Arial" font-size="12" fill="%23666" text-anchor="middle">Loading...</text></svg>';
+  
+  loadCharacterImage(char)
+    .then(loadedImg => {
+      img.src = loadedImg.src;
+    })
+    .catch(error => {
+      console.error(`Failed to load image for ${char}:`, error);
+      // Show error state
+      img.src = 'data:image/svg+xml;charset=UTF-8,<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80"><rect width="80" height="80" fill="%23ffeeee"/><text x="50%" y="50%" font-family="Arial" font-size="12" fill="%23ff0000" text-anchor="middle">Error</text></svg>';
+    });
+  
+  img.addEventListener("click", () => selectFn(char, img));
+  container.appendChild(img);
+}
+
+// Update the character creation loop
+characters.forEach(char => {
+  createCharacterSelectImage(char, p1Container, (char, img) => selectCharacter(1, char, img));
+  createCharacterSelectImage(char, p2Container, (char, img) => selectCharacter(2, char, img));
+  createCharacterSelectImage(char, aiContainer, selectAICharacter);
 });
+
 function selectCharacter(player, char, imgElement) {
   if (player === 1) {
     p1Char = char;

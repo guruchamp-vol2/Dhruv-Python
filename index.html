@@ -5,18 +5,30 @@
   <meta name="viewport" content="width=800, initial-scale=1.0"/>
   <title>2D Fighting Game</title>
   <link rel="stylesheet" href="style.css" />
+  <base id="baseUrl" href="/">
 </head>
 <body>
+  <script>
+    // Set the correct base URL for GitHub Pages or local development
+    (function() {
+      const isGitHub = window.location.hostname.includes('github.io');
+      const basePath = isGitHub ? '/Dhruv-Python/game%20to%20be%20name/' : '/';
+      document.getElementById('baseUrl').href = basePath;
+      console.log('Set base URL to:', basePath);
+    })();
+  </script>
+
   <!-- Preload game assets -->
   <div style="display: none;">
-    <img id="fight-background" src="" alt="Fight Background">
+    <img id="fight-background" alt="Fight Background">
   </div>
 
   <script>
-    // Set correct path for background image based on deployment
+    // Set background image after base URL is set
     window.addEventListener('load', () => {
-      const BASE_PATH = window.location.hostname.includes('github.io') ? '/Dhruv-Python/game%20to%20be%20name/' : '/';
-      document.getElementById('fight-background').src = `${BASE_PATH}images/fight-background.jpg`;
+      const bgImage = document.getElementById('fight-background');
+      bgImage.src = `${document.getElementById('baseUrl').href}images/fight-background.jpg`;
+      console.log('Set background image source to:', bgImage.src);
     });
   </script>
 
