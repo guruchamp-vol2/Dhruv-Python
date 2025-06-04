@@ -282,3 +282,23 @@ canvas {
   background: #ff6e40;
   transform: scale(1.05);
 }
+.character-select-img {
+  width: 80px;
+  height: 80px;
+  margin: 5px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: #eee;
+  object-fit: contain;
+  padding: 5px;
+  box-sizing: border-box;
+}
+.character-select-img:hover {
+  transform: scale(1.1);
+  box-shadow: 0 0 10px rgba(0,0,0,0.3);
+}
+.character-select-img.selected {
+  border: 3px solid #ff4444;
+  background: #fff;
+}

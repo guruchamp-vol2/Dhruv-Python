@@ -47,24 +47,27 @@ let isHost = false;
 let currentRoomId = null;
 let isOnlineGame = false;
 
-// Add a mapping for case-sensitive filenames
+// Add base path handling for GitHub Pages
+const BASE_PATH = window.location.hostname.includes('github.io') ? '/Dhruv-Python/game%20to%20be%20name/' : '/';
+
+// Update characterImages mapping with correct paths
 const characterImages = {
-  mario: "mario.png",
-  luigi: "luigi.png",
-  kirby: "kirby.png",
-  sonic: "sonic.png",
-  tails: "Tails.png",
-  shadow: "shadow.png",
-  toriel: "toriel.png",
-  sans: "sans.png",
-  mettaton: "Mettaton.png",
-  kris: "kris.png",
-  susie: "susie.png",
-  jevil: "jevil.png",
-  spadeking: "spadeking.png",
-  berdly: "berdly.png",
-  noelle: "noelle.png",
-  spamton: "spamton.png"
+  mario: `${BASE_PATH}images/mario.png`,
+  luigi: `${BASE_PATH}images/luigi.png`,
+  kirby: `${BASE_PATH}images/kirby.png`,
+  sonic: `${BASE_PATH}images/sonic.png`,
+  tails: `${BASE_PATH}images/Tails.png`,
+  shadow: `${BASE_PATH}images/shadow.png`,
+  toriel: `${BASE_PATH}images/toriel.png`,
+  sans: `${BASE_PATH}images/sans.png`,
+  mettaton: `${BASE_PATH}images/Mettaton.png`,
+  kris: `${BASE_PATH}images/kris.png`,
+  susie: `${BASE_PATH}images/susie.png`,
+  jevil: `${BASE_PATH}images/jevil.png`,
+  spadeking: `${BASE_PATH}images/spadeking.png`,
+  berdly: `${BASE_PATH}images/berdly.png`,
+  noelle: `${BASE_PATH}images/noelle.png`,
+  spamton: `${BASE_PATH}images/spamton.png`
 };
 
 // Initialize image objects
@@ -72,7 +75,7 @@ const p1Img = new Image();
 const p2Img = new Image();
 const aiImg = new Image();
 
-// Add error handling for image loading
+// Update loadCharacterImage function
 function loadCharacterImage(char) {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -82,10 +85,31 @@ function loadCharacterImage(char) {
     };
     img.onerror = (error) => {
       console.error(`Failed to load image for ${char}:`, error);
-      console.log(`Attempted to load from: images/${characterImages[char]}`);
-      reject(error);
+      // Try different case variations as fallback
+      const fallbackPaths = [
+        `${BASE_PATH}images/${char.toLowerCase()}.png`,
+        `${BASE_PATH}images/${char.toUpperCase()}.png`,
+        `${BASE_PATH}images/${char.charAt(0).toUpperCase() + char.slice(1)}.png`
+      ];
+      
+      let fallbackIndex = 0;
+      function tryFallback() {
+        if (fallbackIndex < fallbackPaths.length) {
+          console.log(`Trying fallback path for ${char}: ${fallbackPaths[fallbackIndex]}`);
+          img.src = fallbackPaths[fallbackIndex];
+          fallbackIndex++;
+        } else {
+          // If all fallbacks fail, show a placeholder
+          img.src = 'data:image/svg+xml;charset=UTF-8,<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><rect width="40" height="40" fill="%23ccc"/></svg>';
+          console.error(`Could not load any image variation for ${char}`);
+          resolve(img); // Resolve with placeholder instead of rejecting
+        }
+      }
+      
+      img.onerror = tryFallback;
+      tryFallback();
     };
-    img.src = `images/${characterImages[char]}`;
+    img.src = characterImages[char];
   });
 }
 
@@ -174,17 +198,46 @@ const aiContainer = document.getElementById("ai-characters");
 characters.forEach(char => {
   function createChar(container, selectFn) {
     const img = document.createElement("img");
-    img.onerror = (error) => {
-      console.error(`Failed to load image for ${char} in selection screen:`, error);
-      console.log(`Attempted to load from: images/${characterImages[char]}`);
-      // Try lowercase version as fallback
-      img.src = `images/${char.toLowerCase()}.png`;
+    img.classList.add("character-select-img");
+    
+    // Preload the image
+    const preloadImg = new Image();
+    preloadImg.onload = () => {
+      img.src = preloadImg.src;
+      console.log(`Successfully loaded selection image for ${char}`);
     };
-    img.onload = () => console.log(`Successfully loaded selection image for ${char}: ${img.src}`);
-    const imagePath = `images/${characterImages[char]}`;
+    preloadImg.onerror = (error) => {
+      console.error(`Failed to load image for ${char} in selection screen:`, error);
+      // Try different case variations
+      const fallbackPaths = [
+        `${BASE_PATH}images/${char.toLowerCase()}.png`,
+        `${BASE_PATH}images/${char.toUpperCase()}.png`,
+        `${BASE_PATH}images/${char.charAt(0).toUpperCase() + char.slice(1)}.png`
+      ];
+      
+      let fallbackIndex = 0;
+      function tryFallback() {
+        if (fallbackIndex < fallbackPaths.length) {
+          console.log(`Trying fallback path for ${char}: ${fallbackPaths[fallbackIndex]}`);
+          preloadImg.src = fallbackPaths[fallbackIndex];
+          fallbackIndex++;
+        } else {
+          // If all fallbacks fail, show a placeholder
+          img.src = 'data:image/svg+xml;charset=UTF-8,<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><rect width="40" height="40" fill="%23ccc"/></svg>';
+          console.error(`Could not load any image variation for ${char}`);
+        }
+      }
+      
+      preloadImg.onerror = tryFallback;
+      tryFallback();
+    };
+    
+    const imagePath = characterImages[char];
     console.log(`Attempting to load selection image for ${char} from: ${imagePath}`);
-    img.src = imagePath;
+    preloadImg.src = imagePath;
+    
     img.alt = char;
+    img.title = char.charAt(0).toUpperCase() + char.slice(1); // Capitalize first letter
     img.addEventListener("click", () => selectFn(char, img));
     container.appendChild(img);
   }

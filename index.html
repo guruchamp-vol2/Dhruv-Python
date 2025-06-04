@@ -9,8 +9,16 @@
 <body>
   <!-- Preload game assets -->
   <div style="display: none;">
-    <img id="fight-background" src="images/fight-background.jpg" alt="Fight Background">
+    <img id="fight-background" src="" alt="Fight Background">
   </div>
+
+  <script>
+    // Set correct path for background image based on deployment
+    window.addEventListener('load', () => {
+      const BASE_PATH = window.location.hostname.includes('github.io') ? '/Dhruv-Python/game%20to%20be%20name/' : '/';
+      document.getElementById('fight-background').src = `${BASE_PATH}images/fight-background.jpg`;
+    });
+  </script>
 
   <div id="character-select">
     <h2>Select Characters</h2>
