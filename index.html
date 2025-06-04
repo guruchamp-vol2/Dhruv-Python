@@ -5,29 +5,26 @@
   <meta name="viewport" content="width=800, initial-scale=1.0"/>
   <title>2D Fighting Game</title>
   <link rel="stylesheet" href="style.css" />
-  <base id="baseUrl" href="/">
+  <script>
+    // Set the base URL for assets
+    window.BASE_URL = (() => {
+      const isGitHub = window.location.hostname.includes('github.io');
+      return isGitHub ? '/Dhruv-Python/game%20to%20be%20name/' : '/';
+    })();
+    console.log('Set BASE_URL to:', window.BASE_URL);
+  </script>
 </head>
 <body>
-  <script>
-    // Set the correct base URL for GitHub Pages or local development
-    (function() {
-      const isGitHub = window.location.hostname.includes('github.io');
-      const basePath = isGitHub ? '/Dhruv-Python/game%20to%20be%20name/' : '/';
-      document.getElementById('baseUrl').href = basePath;
-      console.log('Set base URL to:', basePath);
-    })();
-  </script>
-
   <!-- Preload game assets -->
   <div style="display: none;">
     <img id="fight-background" alt="Fight Background">
   </div>
 
   <script>
-    // Set background image after base URL is set
+    // Set background image with correct path
     window.addEventListener('load', () => {
       const bgImage = document.getElementById('fight-background');
-      bgImage.src = `${document.getElementById('baseUrl').href}images/fight-background.jpg`;
+      bgImage.src = `${window.BASE_URL}images/fight-background.jpg`;
       console.log('Set background image source to:', bgImage.src);
     });
   </script>

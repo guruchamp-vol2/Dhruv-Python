@@ -47,18 +47,15 @@ let isHost = false;
 let currentRoomId = null;
 let isOnlineGame = false;
 
-// Add base path handling for GitHub Pages with proper encoding
-const BASE_PATH = (() => {
+// Get the base URL for assets based on environment
+const BASE_URL = (() => {
   const isGitHub = window.location.hostname.includes('github.io');
-  if (isGitHub) {
-    return '/Dhruv-Python/game%20to%20be%20name/';
-  }
-  return '/';
+  return isGitHub ? '/Dhruv-Python/game%20to%20be%20name/' : '/';
 })();
 
-console.log('Using BASE_PATH:', BASE_PATH); // Debug log
+console.log('Using BASE_URL:', BASE_URL); // Debug log
 
-// Character image configuration
+// Character image configuration with proper GitHub Pages paths
 const characterImages = {
   mario: "mario.png",
   luigi: "luigi.png",
@@ -78,13 +75,23 @@ const characterImages = {
   spamton: "spamton.png"
 };
 
-// Simple image loading function
+// Initialize image objects
+const p1Img = new Image();
+const p2Img = new Image();
+const aiImg = new Image();
+
+// Simple image loading function with GitHub Pages path handling
 function loadCharacterImage(char) {
   return new Promise((resolve, reject) => {
     const img = new Image();
-    img.onload = () => resolve(img);
+    
+    img.onload = () => {
+      console.log(`Successfully loaded image for ${char}:`, img.src);
+      resolve(img);
+    };
+    
     img.onerror = () => {
-      console.error(`Failed to load image for ${char}`);
+      console.error(`Failed to load image for ${char} from:`, img.src);
       // Create a colored placeholder
       const canvas = document.createElement('canvas');
       canvas.width = 80;
@@ -101,7 +108,11 @@ function loadCharacterImage(char) {
       placeholderImg.src = canvas.toDataURL();
       resolve(placeholderImg);
     };
-    img.src = `images/${characterImages[char]}`;
+
+    // Construct the full image path using BASE_URL
+    const imagePath = `${BASE_URL}images/${characterImages[char]}`;
+    console.log(`Loading image for ${char} from:`, imagePath);
+    img.src = imagePath;
   });
 }
 

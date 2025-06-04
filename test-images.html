@@ -22,77 +22,66 @@
     </style>
 </head>
 <body>
-    <div class="image-container">
-        <div class="image-item">
-            <img src="images/mario.png" alt="mario">
-            <div>mario</div>
-        </div>
-        <div class="image-item">
-            <img src="images/luigi.png" alt="luigi">
-            <div>luigi</div>
-        </div>
-        <div class="image-item">
-            <img src="images/kirby.png" alt="kirby">
-            <div>kirby</div>
-        </div>
-        <div class="image-item">
-            <img src="images/sonic.png" alt="sonic">
-            <div>sonic</div>
-        </div>
-        <div class="image-item">
-            <img src="images/Tails.png" alt="tails">
-            <div>tails</div>
-        </div>
-        <div class="image-item">
-            <img src="images/shadow.png" alt="shadow">
-            <div>shadow</div>
-        </div>
-        <div class="image-item">
-            <img src="images/toriel.png" alt="toriel">
-            <div>toriel</div>
-        </div>
-        <div class="image-item">
-            <img src="images/sans.png" alt="sans">
-            <div>sans</div>
-        </div>
-        <div class="image-item">
-            <img src="images/Mettaton.png" alt="mettaton">
-            <div>mettaton</div>
-        </div>
-        <div class="image-item">
-            <img src="images/kris.png" alt="kris">
-            <div>kris</div>
-        </div>
-        <div class="image-item">
-            <img src="images/susie.png" alt="susie">
-            <div>susie</div>
-        </div>
-        <div class="image-item">
-            <img src="images/jevil.png" alt="jevil">
-            <div>jevil</div>
-        </div>
-        <div class="image-item">
-            <img src="images/spadeking.png" alt="spadeking">
-            <div>spadeking</div>
-        </div>
-        <div class="image-item">
-            <img src="images/berdly.png" alt="berdly">
-            <div>berdly</div>
-        </div>
-        <div class="image-item">
-            <img src="images/noelle.png" alt="noelle">
-            <div>noelle</div>
-        </div>
-        <div class="image-item">
-            <img src="images/spamton.png" alt="spamton">
-            <div>spamton</div>
-        </div>
+    <div class="image-container" id="image-container">
+        <!-- Images will be added here by JavaScript -->
     </div>
     <script>
-        // Log any image loading errors
-        document.querySelectorAll('img').forEach(img => {
-            img.onerror = () => console.error(`Failed to load: ${img.src}`);
-            img.onload = () => console.log(`Successfully loaded: ${img.src}`);
+        // Get the base URL for assets based on environment
+        const BASE_URL = (() => {
+            const isGitHub = window.location.hostname.includes('github.io');
+            return isGitHub ? '/Dhruv-Python/game%20to%20be%20name/' : '/';
+        })();
+
+        console.log('Using BASE_URL:', BASE_URL);
+
+        // Character configuration
+        const characters = [
+            "mario", "luigi", "kirby", "sonic", "tails", "shadow",
+            "toriel", "sans", "mettaton", "kris", "susie",
+            "jevil", "spadeking", "berdly", "noelle", "spamton"
+        ];
+
+        const characterImages = {
+            mario: "mario.png",
+            luigi: "luigi.png",
+            kirby: "kirby.png",
+            sonic: "sonic.png",
+            tails: "Tails.png",
+            shadow: "shadow.png",
+            toriel: "toriel.png",
+            sans: "sans.png",
+            mettaton: "Mettaton.png",
+            kris: "kris.png",
+            susie: "susie.png",
+            jevil: "jevil.png",
+            spadeking: "spadeking.png",
+            berdly: "berdly.png",
+            noelle: "noelle.png",
+            spamton: "spamton.png"
+        };
+
+        const container = document.getElementById('image-container');
+
+        // Create image elements
+        characters.forEach(char => {
+            const div = document.createElement('div');
+            div.className = 'image-item';
+            
+            const img = document.createElement('img');
+            const imagePath = `${BASE_URL}images/${characterImages[char]}`;
+            img.src = imagePath;
+            img.alt = char;
+            
+            const label = document.createElement('div');
+            label.textContent = char;
+            
+            // Log loading status
+            img.onload = () => console.log(`✅ Successfully loaded: ${imagePath}`);
+            img.onerror = () => console.error(`❌ Failed to load: ${imagePath}`);
+            
+            div.appendChild(img);
+            div.appendChild(label);
+            container.appendChild(div);
         });
     </script>
 </body>
