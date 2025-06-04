@@ -58,17 +58,17 @@ const BASE_URL = (() => {
 
 console.log('Using BASE_URL:', BASE_URL); // Debug log
 
-// Character image configuration with proper GitHub Pages paths
+// Character image configuration with exact filenames
 const characterImages = {
   mario: "mario.png",
   luigi: "luigi.png",
   kirby: "kirby.png",
   sonic: "sonic.png",
-  tails: "Tails.png",
+  tails: "Tails.png",      // Note the capital T
   shadow: "shadow.png",
   toriel: "toriel.png",
   sans: "sans.png",
-  mettaton: "Mettaton.png",
+  mettaton: "Mettaton.png", // Note the capital M
   kris: "kris.png",
   susie: "susie.png",
   jevil: "jevil.png",
@@ -83,7 +83,7 @@ const p1Img = new Image();
 const p2Img = new Image();
 const aiImg = new Image();
 
-// Simple image loading function with GitHub Pages path handling
+// Simple image loading function with robust error handling
 function loadCharacterImage(char) {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -94,47 +94,38 @@ function loadCharacterImage(char) {
     };
     
     img.onerror = (error) => {
-      console.error(`Failed to load image for ${char} from:`, img.src, error);
-      // Try with lowercase filename as fallback
-      const lowercaseImg = new Image();
-      const lowercasePath = `${BASE_URL}images/${characterImages[char].toLowerCase()}`;
+      console.error(`Failed to load image for ${char} from:`, img.src);
       
-      lowercaseImg.onload = () => {
-        console.log(`Successfully loaded lowercase image for ${char}:`, lowercaseImg.src);
-        resolve(lowercaseImg);
-      };
+      // Create a colored placeholder
+      const canvas = document.createElement('canvas');
+      canvas.width = 80;
+      canvas.height = 80;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#cccccc';
+      ctx.fillRect(0, 0, 80, 80);
+      ctx.fillStyle = '#000000';
+      ctx.font = '14px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText(char, 40, 40);
       
-      lowercaseImg.onerror = () => {
-        console.error(`Failed to load lowercase image for ${char} from:`, lowercasePath);
-        // Create a colored placeholder
-        const canvas = document.createElement('canvas');
-        canvas.width = 80;
-        canvas.height = 80;
-        const ctx = canvas.getContext('2d');
-        ctx.fillStyle = '#cccccc';
-        ctx.fillRect(0, 0, 80, 80);
-        ctx.fillStyle = '#000000';
-        ctx.font = '14px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText(char, 40, 40);
-        
-        const placeholderImg = new Image();
-        placeholderImg.src = canvas.toDataURL();
-        resolve(placeholderImg);
-      };
-      
-      lowercaseImg.src = lowercasePath;
+      const placeholderImg = new Image();
+      placeholderImg.src = canvas.toDataURL();
+      resolve(placeholderImg);
     };
 
-    // Construct the full image path using BASE_URL
-    const imagePath = `${BASE_URL}images/${characterImages[char]}`;
-    console.log(`Loading image for ${char} from:`, imagePath);
+    // Try to load the image with the correct path
+    const filename = characterImages[char];
+    const imagePath = `images/${filename}`;
+    console.log(`Attempting to load ${char} from:`, imagePath);
     img.src = imagePath;
   });
 }
 
 // Update character selection UI
 function createCharacterSelectImage(char, container, selectFn) {
+  const div = document.createElement('div');
+  div.className = 'character-select-wrapper';
+  
   const img = document.createElement("img");
   img.classList.add("character-select-img");
   img.alt = char;
@@ -143,15 +134,36 @@ function createCharacterSelectImage(char, container, selectFn) {
   // Show loading state
   img.src = 'data:image/svg+xml;charset=UTF-8,<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80"><rect width="80" height="80" fill="%23eee"/><text x="50%" y="50%" font-family="Arial" font-size="12" fill="%23666" text-anchor="middle">Loading...</text></svg>';
   
-  loadCharacterImage(char).then(loadedImg => {
-    img.src = loadedImg.src;
-  });
+  // Add status indicator
+  const status = document.createElement('div');
+  status.className = 'character-status';
+  status.style.fontSize = '12px';
+  status.style.marginTop = '4px';
+  status.textContent = 'Loading...';
+  
+  loadCharacterImage(char)
+    .then(loadedImg => {
+      img.src = loadedImg.src;
+      status.textContent = 'Ready';
+      status.style.color = 'green';
+    })
+    .catch(error => {
+      console.error(`Error loading ${char}:`, error);
+      status.textContent = 'Error';
+      status.style.color = 'red';
+    });
   
   img.addEventListener("click", () => selectFn(char, img));
-  container.appendChild(img);
+  div.appendChild(img);
+  div.appendChild(status);
+  container.appendChild(div);
 }
 
 // Create character selection UI
+const p1Container = document.getElementById("p1-characters");
+const p2Container = document.getElementById("p2-characters");
+const aiContainer = document.getElementById("ai-characters");
+
 characters.forEach(char => {
   createCharacterSelectImage(char, p1Container, (char, img) => selectCharacter(1, char, img));
   createCharacterSelectImage(char, p2Container, (char, img) => selectCharacter(2, char, img));
