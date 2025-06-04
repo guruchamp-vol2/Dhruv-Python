@@ -11,6 +11,7 @@
         }
         .image-item {
             text-align: center;
+            position: relative;
         }
         img {
             width: 100px;
@@ -18,6 +19,17 @@
             object-fit: contain;
             border: 1px solid #ccc;
             background: #fff;
+        }
+        .error {
+            border-color: red;
+        }
+        .status {
+            position: absolute;
+            bottom: -20px;
+            left: 0;
+            right: 0;
+            font-size: 12px;
+            color: #666;
         }
     </style>
 </head>
@@ -29,7 +41,10 @@
         // Get the base URL for assets based on environment
         const BASE_URL = (() => {
             const isGitHub = window.location.hostname.includes('github.io');
-            return isGitHub ? '/Dhruv-Python/game%20to%20be%20name/' : '/';
+            if (isGitHub) {
+                return 'https://guruchamp-vol2.github.io/Dhruv-Python/game%20to%20be%20name/';
+            }
+            return '/';
         })();
 
         console.log('Using BASE_URL:', BASE_URL);
@@ -75,12 +90,31 @@
             const label = document.createElement('div');
             label.textContent = char;
             
+            const status = document.createElement('div');
+            status.className = 'status';
+            
             // Log loading status
-            img.onload = () => console.log(`✅ Successfully loaded: ${imagePath}`);
-            img.onerror = () => console.error(`❌ Failed to load: ${imagePath}`);
+            img.onload = () => {
+                console.log(`✅ Successfully loaded: ${imagePath}`);
+                status.textContent = '✅ Loaded';
+                status.style.color = 'green';
+            };
+            
+            img.onerror = () => {
+                console.error(`❌ Failed to load: ${imagePath}`);
+                img.classList.add('error');
+                status.textContent = '❌ Failed';
+                status.style.color = 'red';
+                
+                // Try lowercase version
+                const lowercasePath = `${BASE_URL}images/${characterImages[char].toLowerCase()}`;
+                console.log(`Trying lowercase path: ${lowercasePath}`);
+                img.src = lowercasePath;
+            };
             
             div.appendChild(img);
             div.appendChild(label);
+            div.appendChild(status);
             container.appendChild(div);
         });
     </script>

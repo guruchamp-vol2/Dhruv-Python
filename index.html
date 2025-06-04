@@ -9,7 +9,10 @@
     // Set the base URL for assets
     window.BASE_URL = (() => {
       const isGitHub = window.location.hostname.includes('github.io');
-      return isGitHub ? '/Dhruv-Python/game%20to%20be%20name/' : '/';
+      if (isGitHub) {
+        return 'https://guruchamp-vol2.github.io/Dhruv-Python/game%20to%20be%20name/';
+      }
+      return '/';
     })();
     console.log('Set BASE_URL to:', window.BASE_URL);
   </script>

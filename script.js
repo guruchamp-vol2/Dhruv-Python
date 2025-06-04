@@ -50,7 +50,10 @@ let isOnlineGame = false;
 // Get the base URL for assets based on environment
 const BASE_URL = (() => {
   const isGitHub = window.location.hostname.includes('github.io');
-  return isGitHub ? '/Dhruv-Python/game%20to%20be%20name/' : '/';
+  if (isGitHub) {
+    return 'https://guruchamp-vol2.github.io/Dhruv-Python/game%20to%20be%20name/';
+  }
+  return '/';
 })();
 
 console.log('Using BASE_URL:', BASE_URL); // Debug log
@@ -90,23 +93,37 @@ function loadCharacterImage(char) {
       resolve(img);
     };
     
-    img.onerror = () => {
-      console.error(`Failed to load image for ${char} from:`, img.src);
-      // Create a colored placeholder
-      const canvas = document.createElement('canvas');
-      canvas.width = 80;
-      canvas.height = 80;
-      const ctx = canvas.getContext('2d');
-      ctx.fillStyle = '#cccccc';
-      ctx.fillRect(0, 0, 80, 80);
-      ctx.fillStyle = '#000000';
-      ctx.font = '14px Arial';
-      ctx.textAlign = 'center';
-      ctx.fillText(char, 40, 40);
+    img.onerror = (error) => {
+      console.error(`Failed to load image for ${char} from:`, img.src, error);
+      // Try with lowercase filename as fallback
+      const lowercaseImg = new Image();
+      const lowercasePath = `${BASE_URL}images/${characterImages[char].toLowerCase()}`;
       
-      const placeholderImg = new Image();
-      placeholderImg.src = canvas.toDataURL();
-      resolve(placeholderImg);
+      lowercaseImg.onload = () => {
+        console.log(`Successfully loaded lowercase image for ${char}:`, lowercaseImg.src);
+        resolve(lowercaseImg);
+      };
+      
+      lowercaseImg.onerror = () => {
+        console.error(`Failed to load lowercase image for ${char} from:`, lowercasePath);
+        // Create a colored placeholder
+        const canvas = document.createElement('canvas');
+        canvas.width = 80;
+        canvas.height = 80;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#cccccc';
+        ctx.fillRect(0, 0, 80, 80);
+        ctx.fillStyle = '#000000';
+        ctx.font = '14px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(char, 40, 40);
+        
+        const placeholderImg = new Image();
+        placeholderImg.src = canvas.toDataURL();
+        resolve(placeholderImg);
+      };
+      
+      lowercaseImg.src = lowercasePath;
     };
 
     // Construct the full image path using BASE_URL
