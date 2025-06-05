@@ -48,34 +48,29 @@ let currentRoomId = null;
 let isOnlineGame = false;
 
 // Get the base URL for assets based on environment
-const BASE_URL = (() => {
-  const isGitHub = window.location.hostname.includes('github.io');
-  if (isGitHub) {
-    return 'https://guruchamp-vol2.github.io/Dhruv-Python/';
-  }
-  return '/';
-})();
+const BASE_URL = window.location.hostname.includes('github.io') ? 
+  `${window.location.origin}/Dhruv-Python/` : '/';
 
 console.log('Using BASE_URL:', BASE_URL);
 
 // Character image configuration with exact filenames
 const characterImages = {
-  mario: 'mario.png',
-  luigi: 'luigi.png',
-  kirby: 'kirby.png',
-  sonic: 'sonic.png',
-  tails: 'Tails.png',
-  shadow: 'shadow.png',
-  toriel: 'toriel.png',
-  sans: 'sans.png',
-  mettaton: 'Mettaton.png',
-  kris: 'kris.png',
-  susie: 'susie.png',
-  jevil: 'jevil.png',
-  spadeking: 'spadeking.png',
-  berdly: 'berdly.png',
-  noelle: 'noelle.png',
-  spamton: 'spamton.png'
+  mario: BASE_URL + 'mario.png',
+  luigi: BASE_URL + 'luigi.png',
+  kirby: BASE_URL + 'kirby.png',
+  sonic: BASE_URL + 'sonic.png',
+  tails: BASE_URL + 'Tails.png',
+  shadow: BASE_URL + 'shadow.png',
+  toriel: BASE_URL + 'toriel.png',
+  sans: BASE_URL + 'sans.png',
+  mettaton: BASE_URL + 'Mettaton.png',
+  kris: BASE_URL + 'kris.png',
+  susie: BASE_URL + 'susie.png',
+  jevil: BASE_URL + 'jevil.png',
+  spadeking: BASE_URL + 'spadeking.png',
+  berdly: BASE_URL + 'berdly.png',
+  noelle: BASE_URL + 'noelle.png',
+  spamton: BASE_URL + 'spamton.png'
 };
 
 // Initialize image objects
