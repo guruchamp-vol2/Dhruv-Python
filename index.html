@@ -9,23 +9,23 @@
 <body>
   <!-- Preload all game images -->
   <div id="image-preload" style="display: none;">
-    <img id="mario-img" src="./images/mario.png" alt="mario" onerror="console.error('Failed to load:', this.src)">
-    <img id="luigi-img" src="./images/luigi.png" alt="luigi" onerror="console.error('Failed to load:', this.src)">
-    <img id="kirby-img" src="./images/kirby.png" alt="kirby" onerror="console.error('Failed to load:', this.src)">
-    <img id="sonic-img" src="./images/sonic.png" alt="sonic" onerror="console.error('Failed to load:', this.src)">
-    <img id="tails-img" src="./images/Tails.png" alt="tails" onerror="console.error('Failed to load:', this.src)">
-    <img id="shadow-img" src="./images/shadow.png" alt="shadow" onerror="console.error('Failed to load:', this.src)">
-    <img id="toriel-img" src="./images/toriel.png" alt="toriel" onerror="console.error('Failed to load:', this.src)">
-    <img id="sans-img" src="./images/sans.png" alt="sans" onerror="console.error('Failed to load:', this.src)">
-    <img id="mettaton-img" src="./images/Mettaton.png" alt="mettaton" onerror="console.error('Failed to load:', this.src)">
-    <img id="kris-img" src="./images/kris.png" alt="kris" onerror="console.error('Failed to load:', this.src)">
-    <img id="susie-img" src="./images/susie.png" alt="susie" onerror="console.error('Failed to load:', this.src)">
-    <img id="jevil-img" src="./images/jevil.png" alt="jevil" onerror="console.error('Failed to load:', this.src)">
-    <img id="spadeking-img" src="./images/spadeking.png" alt="spadeking" onerror="console.error('Failed to load:', this.src)">
-    <img id="berdly-img" src="./images/berdly.png" alt="berdly" onerror="console.error('Failed to load:', this.src)">
-    <img id="noelle-img" src="./images/noelle.png" alt="noelle" onerror="console.error('Failed to load:', this.src)">
-    <img id="spamton-img" src="./images/spamton.png" alt="spamton" onerror="console.error('Failed to load:', this.src)">
-    <img id="fight-background" src="./images/fight-background.jpg" alt="background" onerror="console.error('Failed to load:', this.src)">
+    <img id="mario-img" src="mario.png" alt="mario" onerror="console.error('Failed to load:', this.src)">
+    <img id="luigi-img" src="luigi.png" alt="luigi" onerror="console.error('Failed to load:', this.src)">
+    <img id="kirby-img" src="kirby.png" alt="kirby" onerror="console.error('Failed to load:', this.src)">
+    <img id="sonic-img" src="sonic.png" alt="sonic" onerror="console.error('Failed to load:', this.src)">
+    <img id="tails-img" src="Tails.png" alt="tails" onerror="console.error('Failed to load:', this.src)">
+    <img id="shadow-img" src="shadow.png" alt="shadow" onerror="console.error('Failed to load:', this.src)">
+    <img id="toriel-img" src="toriel.png" alt="toriel" onerror="console.error('Failed to load:', this.src)">
+    <img id="sans-img" src="sans.png" alt="sans" onerror="console.error('Failed to load:', this.src)">
+    <img id="mettaton-img" src="Mettaton.png" alt="mettaton" onerror="console.error('Failed to load:', this.src)">
+    <img id="kris-img" src="kris.png" alt="kris" onerror="console.error('Failed to load:', this.src)">
+    <img id="susie-img" src="susie.png" alt="susie" onerror="console.error('Failed to load:', this.src)">
+    <img id="jevil-img" src="jevil.png" alt="jevil" onerror="console.error('Failed to load:', this.src)">
+    <img id="spadeking-img" src="spadeking.png" alt="spadeking" onerror="console.error('Failed to load:', this.src)">
+    <img id="berdly-img" src="berdly.png" alt="berdly" onerror="console.error('Failed to load:', this.src)">
+    <img id="noelle-img" src="noelle.png" alt="noelle" onerror="console.error('Failed to load:', this.src)">
+    <img id="spamton-img" src="spamton.png" alt="spamton" onerror="console.error('Failed to load:', this.src)">
+    <img id="fight-background" src="fight-background.jpg" alt="background" onerror="console.error('Failed to load:', this.src)">
   </div>
 
   <script>
@@ -43,10 +43,9 @@
           });
           // Try alternative paths
           const paths = [
-            `images/${img.alt}.png`,
-            `/images/${img.alt}.png`,
-            `../images/${img.alt}.png`,
-            `../../images/${img.alt}.png`
+            img.alt + '.png',
+            './' + img.alt + '.png',
+            '../' + img.alt + '.png'
           ];
           
           function tryNextPath(index) {
@@ -113,25 +112,26 @@
     <button id="start-game" disabled>Start Game</button>
   </div>
 
-  <div id="game-screen" style="display: none; position: relative; width: 800px; height: 400px;">
-    <canvas id="gameCanvas" width="800" height="400"></canvas>
+  <div id="game-screen" style="display: none;">
     <div id="hud">
-      <div>
-        <div id="p1-health"></div>
-        <div id="p1-energy-bar" class="energy-bar-bg"><div id="p1-energy" class="energy-bar-fill"></div></div>
-      </div>
-      <div>
-        <div id="ai-health"></div>
-        <div id="ai-energy-bar" class="energy-bar-bg"><div id="ai-energy" class="energy-bar-fill"></div></div>
-      </div>
-      <div>
-        <div id="p2-health"></div>
-        <div id="p2-energy-bar" class="energy-bar-bg"><div id="p2-energy" class="energy-bar-fill"></div></div>
+      <div id="p1-health">Player 1: 1000</div>
+      <div id="p2-health">Player 2: 1000</div>
+      <div id="ai-health">AI: 1000</div>
+      <div id="energy-bars">
+        <div id="p1-energy"></div>
+        <div id="p2-energy"></div>
+        <div id="ai-energy"></div>
       </div>
     </div>
-    <div id="game-over" style="display: none; font-size: 32px; color: red; text-align: center; margin-top: 20px; position:absolute; top:50%; left:0;width:100%;"></div>
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
   </div>
-  <div id="game-over-screen" style="display: none;"></div>
+
+  <div id="game-over" style="display: none;">
+    <h2>Game Over</h2>
+    <div id="winner-text"></div>
+    <button onclick="location.reload()">Play Again</button>
+  </div>
+
   <script src="script.js"></script>
 </body>
 </html>

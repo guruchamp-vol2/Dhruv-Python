@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Image Loading Test</title>
+    <style>
+        body { 
+            background: #1a1f3c;
+            color: white;
+            font-family: Arial;
+            padding: 20px;
+        }
+        .image-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 20px;
+            padding: 20px;
+        }
+        .image-item {
+            background: rgba(255,255,255,0.1);
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .image-item img {
+            width: 100px;
+            height: 100px;
+            object-fit: contain;
+            background: white;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+        .status {
+            font-size: 12px;
+            padding: 4px;
+            margin-top: 5px;
+        }
+        .error { 
+            background: red;
+        }
+        #debug {
+            background: rgba(0,0,0,0.5);
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            white-space: pre-wrap;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <h1>Image Loading Test</h1>
+    <div id="debug"></div>
+    <div id="image-grid" class="image-grid"></div>
+
+    <script>
+        const debug = document.getElementById('debug');
+        const grid = document.getElementById('image-grid');
+        
+        // Log function that writes to debug div
+        function log(msg) {
+            console.log(msg);
+            debug.textContent += msg + '\n';
+        }
+
+        // Test all possible path combinations
+        const characters = [
+            "mario", "luigi", "kirby", "sonic", "tails", "shadow",
+            "toriel", "sans", "mettaton", "kris", "susie",
+            "jevil", "spadeking", "berdly", "noelle", "spamton"
+        ];
+
+        const paths = [
+            '/images/',
+            'images/',
+            '../images/',
+            './images/',
+            'https://guruchamp-vol2.github.io/Dhruv-Python/game%20to%20be%20name/images/',
+            'https://guruchamp-vol2.github.io/Dhruv-Python/game to be name/images/',
+        ];
+
+        // Test each character with each path
+        characters.forEach(char => {
+            const div = document.createElement('div');
+            div.className = 'image-item';
+            
+            const name = document.createElement('div');
+            name.textContent = char;
+            div.appendChild(name);
+
+            const img = document.createElement('img');
+            img.alt = char;
+            
+            const status = document.createElement('div');
+            status.className = 'status';
+            
+            let loadedPath = null;
+            let currentPathIndex = 0;
+
+            function tryNextPath() {
+                if (currentPathIndex >= paths.length) {
+                    status.textContent = '❌ All paths failed';
+                    status.style.color = 'red';
+                    log(`Failed to load ${char} from all paths`);
+                    return;
+                }
+
+                const path = paths[currentPathIndex];
+                const filename = char === 'tails' ? 'Tails.png' : 
+                               char === 'mettaton' ? 'Mettaton.png' : 
+                               `${char}.png`;
+                               
+                const fullPath = path + filename;
+                log(`Trying ${char} with path: ${fullPath}`);
+
+                img.onload = () => {
+                    loadedPath = fullPath;
+                    status.textContent = '✅ Loaded from: ' + path;
+                    status.style.color = 'green';
+                    log(`Successfully loaded ${char} from ${fullPath}`);
+                };
+
+                img.onerror = () => {
+                    currentPathIndex++;
+                    if (currentPathIndex < paths.length) {
+                        setTimeout(tryNextPath, 500);
+                    } else {
+                        status.textContent = '❌ Failed';
+                        status.style.color = 'red';
+                    }
+                };
+
+                img.src = fullPath;
+            }
+
+            tryNextPath();
+            
+            div.appendChild(img);
+            div.appendChild(status);
+            grid.appendChild(div);
+        });
+    </script>
+</body>
+</html> 
