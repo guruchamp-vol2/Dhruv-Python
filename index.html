@@ -52,6 +52,10 @@
             naturalHeight: img.naturalHeight,
             complete: img.complete
           });
+          // Try loading from relative path as fallback
+          const relativePath = `images/${img.alt}.png`;
+          console.log(`Trying relative path for ${img.id}:`, relativePath);
+          img.src = relativePath;
         };
         
         img.onload = () => {
