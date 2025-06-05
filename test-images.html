@@ -1,121 +1,142 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Image Test</title>
+    <title>Image Loading Test</title>
     <style>
-        .image-container {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
+        body { 
+            background: #1a1f3c;
+            color: white;
+            font-family: Arial;
+            padding: 20px;
+        }
+        .image-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 20px;
             padding: 20px;
         }
         .image-item {
+            background: rgba(255,255,255,0.1);
+            padding: 10px;
+            border-radius: 8px;
             text-align: center;
-            position: relative;
         }
-        img {
+        .image-item img {
             width: 100px;
             height: 100px;
             object-fit: contain;
-            border: 1px solid #ccc;
-            background: #fff;
-        }
-        .error {
-            border-color: red;
+            background: white;
+            border-radius: 8px;
+            margin-bottom: 10px;
         }
         .status {
-            position: absolute;
-            bottom: -20px;
-            left: 0;
-            right: 0;
             font-size: 12px;
-            color: #666;
+            padding: 4px;
+            margin-top: 5px;
+        }
+        .error { 
+            background: red;
+        }
+        #debug {
+            background: rgba(0,0,0,0.5);
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            white-space: pre-wrap;
+            font-family: monospace;
         }
     </style>
 </head>
 <body>
-    <div class="image-container" id="image-container">
-        <!-- Images will be added here by JavaScript -->
-    </div>
+    <h1>Image Loading Test</h1>
+    <div id="debug"></div>
+    <div id="image-grid" class="image-grid"></div>
+
     <script>
-        // Get the base URL for assets based on environment
-        const BASE_URL = (() => {
-            const isGitHub = window.location.hostname.includes('github.io');
-            if (isGitHub) {
-                return 'https://guruchamp-vol2.github.io/Dhruv-Python/game%20to%20be%20name/';
-            }
-            return '/';
-        })();
+        const debug = document.getElementById('debug');
+        const grid = document.getElementById('image-grid');
+        
+        // Log function that writes to debug div
+        function log(msg) {
+            console.log(msg);
+            debug.textContent += msg + '\n';
+        }
 
-        console.log('Using BASE_URL:', BASE_URL);
-
-        // Character configuration
+        // Test all possible path combinations
         const characters = [
             "mario", "luigi", "kirby", "sonic", "tails", "shadow",
             "toriel", "sans", "mettaton", "kris", "susie",
             "jevil", "spadeking", "berdly", "noelle", "spamton"
         ];
 
-        const characterImages = {
-            mario: "mario.png",
-            luigi: "luigi.png",
-            kirby: "kirby.png",
-            sonic: "sonic.png",
-            tails: "Tails.png",
-            shadow: "shadow.png",
-            toriel: "toriel.png",
-            sans: "sans.png",
-            mettaton: "Mettaton.png",
-            kris: "kris.png",
-            susie: "susie.png",
-            jevil: "jevil.png",
-            spadeking: "spadeking.png",
-            berdly: "berdly.png",
-            noelle: "noelle.png",
-            spamton: "spamton.png"
-        };
+        const paths = [
+            '/images/',
+            'images/',
+            '../images/',
+            './images/',
+            'https://guruchamp-vol2.github.io/Dhruv-Python/game%20to%20be%20name/images/',
+            'https://guruchamp-vol2.github.io/Dhruv-Python/game to be name/images/',
+        ];
 
-        const container = document.getElementById('image-container');
-
-        // Create image elements
+        // Test each character with each path
         characters.forEach(char => {
             const div = document.createElement('div');
             div.className = 'image-item';
             
+            const name = document.createElement('div');
+            name.textContent = char;
+            div.appendChild(name);
+
             const img = document.createElement('img');
-            const imagePath = `${BASE_URL}images/${characterImages[char]}`;
-            img.src = imagePath;
             img.alt = char;
-            
-            const label = document.createElement('div');
-            label.textContent = char;
             
             const status = document.createElement('div');
             status.className = 'status';
             
-            // Log loading status
-            img.onload = () => {
-                console.log(`✅ Successfully loaded: ${imagePath}`);
-                status.textContent = '✅ Loaded';
-                status.style.color = 'green';
-            };
-            
-            img.onerror = () => {
-                console.error(`❌ Failed to load: ${imagePath}`);
-                img.classList.add('error');
-                status.textContent = '❌ Failed';
-                status.style.color = 'red';
-                
-                // Try lowercase version
-                const lowercasePath = `${BASE_URL}images/${characterImages[char].toLowerCase()}`;
-                console.log(`Trying lowercase path: ${lowercasePath}`);
-                img.src = lowercasePath;
-            };
+            let loadedPath = null;
+            let currentPathIndex = 0;
+
+            function tryNextPath() {
+                if (currentPathIndex >= paths.length) {
+                    status.textContent = '❌ All paths failed';
+                    status.style.color = 'red';
+                    log(`Failed to load ${char} from all paths`);
+                    return;
+                }
+
+                const path = paths[currentPathIndex];
+                const filename = char === 'tails' ? 'Tails.png' : 
+                               char === 'mettaton' ? 'Mettaton.png' : 
+                               `${char}.png`;
+                               
+                const fullPath = path + filename;
+                log(`Trying ${char} with path: ${fullPath}`);
+
+                img.onload = () => {
+                    loadedPath = fullPath;
+                    status.textContent = '✅ Loaded from: ' + path;
+                    status.style.color = 'green';
+                    log(`Successfully loaded ${char} from ${fullPath}`);
+                };
+
+                img.onerror = () => {
+                    currentPathIndex++;
+                    if (currentPathIndex < paths.length) {
+                        setTimeout(tryNextPath, 500);
+                    } else {
+                        status.textContent = '❌ Failed';
+                        status.style.color = 'red';
+                    }
+                };
+
+                img.src = fullPath;
+            }
+
+            tryNextPath();
             
             div.appendChild(img);
-            div.appendChild(label);
             div.appendChild(status);
-            container.appendChild(div);
+            grid.appendChild(div);
         });
     </script>
 </body>

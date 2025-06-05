@@ -5,30 +5,64 @@
   <meta name="viewport" content="width=800, initial-scale=1.0"/>
   <title>2D Fighting Game</title>
   <link rel="stylesheet" href="style.css" />
-  <script>
-    // Set the base URL for assets
-    window.BASE_URL = (() => {
-      const isGitHub = window.location.hostname.includes('github.io');
-      if (isGitHub) {
-        return 'https://guruchamp-vol2.github.io/Dhruv-Python/game%20to%20be%20name/';
-      }
-      return '/';
-    })();
-    console.log('Set BASE_URL to:', window.BASE_URL);
-  </script>
 </head>
 <body>
-  <!-- Preload game assets -->
-  <div style="display: none;">
-    <img id="fight-background" alt="Fight Background">
+  <!-- Preload all game images -->
+  <div id="image-preload" style="display: none;">
+    <img id="mario-img" src="https://guruchamp-vol2.github.io/Dhruv-Python/game%20to%20be%20name/images/mario.png" alt="mario" onerror="console.error('Failed to load:', this.src)">
+    <img id="luigi-img" src="https://guruchamp-vol2.github.io/Dhruv-Python/game%20to%20be%20name/images/luigi.png" alt="luigi" onerror="console.error('Failed to load:', this.src)">
+    <img id="kirby-img" src="https://guruchamp-vol2.github.io/Dhruv-Python/game%20to%20be%20name/images/kirby.png" alt="kirby" onerror="console.error('Failed to load:', this.src)">
+    <img id="sonic-img" src="https://guruchamp-vol2.github.io/Dhruv-Python/game%20to%20be%20name/images/sonic.png" alt="sonic" onerror="console.error('Failed to load:', this.src)">
+    <img id="tails-img" src="https://guruchamp-vol2.github.io/Dhruv-Python/game%20to%20be%20name/images/Tails.png" alt="tails" onerror="console.error('Failed to load:', this.src)">
+    <img id="shadow-img" src="https://guruchamp-vol2.github.io/Dhruv-Python/game%20to%20be%20name/images/shadow.png" alt="shadow" onerror="console.error('Failed to load:', this.src)">
+    <img id="toriel-img" src="https://guruchamp-vol2.github.io/Dhruv-Python/game%20to%20be%20name/images/toriel.png" alt="toriel" onerror="console.error('Failed to load:', this.src)">
+    <img id="sans-img" src="https://guruchamp-vol2.github.io/Dhruv-Python/game%20to%20be%20name/images/sans.png" alt="sans" onerror="console.error('Failed to load:', this.src)">
+    <img id="mettaton-img" src="https://guruchamp-vol2.github.io/Dhruv-Python/game%20to%20be%20name/images/Mettaton.png" alt="mettaton" onerror="console.error('Failed to load:', this.src)">
+    <img id="kris-img" src="https://guruchamp-vol2.github.io/Dhruv-Python/game%20to%20be%20name/images/kris.png" alt="kris" onerror="console.error('Failed to load:', this.src)">
+    <img id="susie-img" src="https://guruchamp-vol2.github.io/Dhruv-Python/game%20to%20be%20name/images/susie.png" alt="susie" onerror="console.error('Failed to load:', this.src)">
+    <img id="jevil-img" src="https://guruchamp-vol2.github.io/Dhruv-Python/game%20to%20be%20name/images/jevil.png" alt="jevil" onerror="console.error('Failed to load:', this.src)">
+    <img id="spadeking-img" src="https://guruchamp-vol2.github.io/Dhruv-Python/game%20to%20be%20name/images/spadeking.png" alt="spadeking" onerror="console.error('Failed to load:', this.src)">
+    <img id="berdly-img" src="https://guruchamp-vol2.github.io/Dhruv-Python/game%20to%20be%20name/images/berdly.png" alt="berdly" onerror="console.error('Failed to load:', this.src)">
+    <img id="noelle-img" src="https://guruchamp-vol2.github.io/Dhruv-Python/game%20to%20be%20name/images/noelle.png" alt="noelle" onerror="console.error('Failed to load:', this.src)">
+    <img id="spamton-img" src="https://guruchamp-vol2.github.io/Dhruv-Python/game%20to%20be%20name/images/spamton.png" alt="spamton" onerror="console.error('Failed to load:', this.src)">
+    <img id="fight-background" src="https://guruchamp-vol2.github.io/Dhruv-Python/game%20to%20be%20name/images/fight-background.jpg" alt="background" onerror="console.error('Failed to load:', this.src)">
   </div>
 
   <script>
-    // Set background image with correct path
-    window.addEventListener('load', () => {
-      const bgImage = document.getElementById('fight-background');
-      bgImage.src = `${window.BASE_URL}images/fight-background.jpg`;
-      console.log('Set background image source to:', bgImage.src);
+    // Debug image loading and fix URLs
+    document.addEventListener('DOMContentLoaded', () => {
+      const images = document.querySelectorAll('#image-preload img');
+      images.forEach(img => {
+        // Fix the URL encoding
+        const originalSrc = img.src;
+        const fixedSrc = originalSrc.replace(/ /g, '%20');
+        if (originalSrc !== fixedSrc) {
+          console.log(`Fixing URL for ${img.id}:`, {
+            original: originalSrc,
+            fixed: fixedSrc
+          });
+          img.src = fixedSrc;
+        }
+
+        // Add load/error handlers
+        img.onerror = () => {
+          console.error(`Failed to load image: ${img.id}`, {
+            src: img.src,
+            naturalWidth: img.naturalWidth,
+            naturalHeight: img.naturalHeight,
+            complete: img.complete
+          });
+        };
+        
+        img.onload = () => {
+          console.log(`Successfully loaded image: ${img.id}`, {
+            src: img.src,
+            naturalWidth: img.naturalWidth,
+            naturalHeight: img.naturalHeight,
+            complete: img.complete
+          });
+        };
+      });
     });
   </script>
 
@@ -87,7 +121,6 @@
     <button onclick="location.reload()">Play Again</button>
   </div>
 
-  <script src="image-data.js"></script>
   <script src="script.js"></script>
 </body>
 </html>

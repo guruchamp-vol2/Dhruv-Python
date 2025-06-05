@@ -1,9 +1,13 @@
+// This file will contain the base64 encoded image data
+// Please copy the entire output from the convert-images.html page and replace this content
+
 // Character image data as base64 strings
 const characterImageData = {
-  mario: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIAAAACACAYAAADDPmHLAAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAADsQAAA7EB9YPtSQAAABl0RVh0U29mdHdhcmUAd3d3Lmlua3NjYXBlLm9yZ5vuPBoAAA==",
-  luigi: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIAAAACACAYAAADDPmHLAAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAADsQAAA7EB9YPtSQAAABl0RVh0U29mdHdhcmUAd3d3Lmlua3NjYXBlLm9yZ5vuPBoAAA==",
-  kirby: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIAAAACACAYAAADDPmHLAAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAADsQAAA7EB9YPtSQAAABl0RVh0U29mdHdhcmUAd3d3Lmlua3NjYXBlLm9yZ5vuPBoAAA==",
-  // ... add other character images here
+  // Your actual base64 data will go here
+  // Example:
+  // mario: "data:image/png;base64,iVBORw0KGgoAAAANSUh...",
+  // luigi: "data:image/png;base64,iVBORw0KGgoAAAANSUh...",
+  // etc...
 };
 
 // Function to create an image element from base64 data

@@ -51,12 +51,13 @@ let isOnlineGame = false;
 const BASE_URL = (() => {
   const isGitHub = window.location.hostname.includes('github.io');
   if (isGitHub) {
-    return 'https://guruchamp-vol2.github.io/Dhruv-Python/game%20to%20be%20name/';
+    // Remove URL encoding from the path
+    return 'https://guruchamp-vol2.github.io/Dhruv-Python/game to be name/';
   }
   return '/';
 })();
 
-console.log('Using BASE_URL:', BASE_URL); // Debug log
+console.log('Using BASE_URL:', BASE_URL);
 
 // Character image configuration with exact filenames
 const characterImages = {
@@ -83,55 +84,93 @@ const p1Img = new Image();
 const p2Img = new Image();
 const aiImg = new Image();
 
-// Simple image loading function with base64 data
-function loadCharacterImage(char) {
+// Simplified image loading function that uses preloaded images
+function loadCharacterImage(character) {
   return new Promise((resolve, reject) => {
-    if (characterImageData[char]) {
-      const img = createImageFromBase64(characterImageData[char]);
-      img.onload = () => {
-        console.log(`Successfully loaded image for ${char}`);
-        resolve(img);
-      };
-      img.onerror = () => {
-        console.error(`Failed to load image for ${char}`);
-        // Create a colored placeholder
-        const canvas = document.createElement('canvas');
-        canvas.width = 80;
-        canvas.height = 80;
-        const ctx = canvas.getContext('2d');
-        ctx.fillStyle = '#cccccc';
-        ctx.fillRect(0, 0, 80, 80);
-        ctx.fillStyle = '#000000';
-        ctx.font = '14px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText(char, 40, 40);
-        
-        const placeholderImg = new Image();
-        placeholderImg.src = canvas.toDataURL();
-        resolve(placeholderImg);
-      };
-    } else {
-      console.error(`No image data found for ${char}`);
-      // Create a colored placeholder
-      const canvas = document.createElement('canvas');
-      canvas.width = 80;
-      canvas.height = 80;
-      const ctx = canvas.getContext('2d');
-      ctx.fillStyle = '#cccccc';
-      ctx.fillRect(0, 0, 80, 80);
-      ctx.fillStyle = '#000000';
-      ctx.font = '14px Arial';
-      ctx.textAlign = 'center';
-      ctx.fillText(char, 40, 40);
-      
-      const placeholderImg = new Image();
-      placeholderImg.src = canvas.toDataURL();
-      resolve(placeholderImg);
+    // Get the preloaded image element
+    const imgId = `${character}-img`;
+    const preloadedImg = document.getElementById(imgId);
+    
+    if (!preloadedImg) {
+      console.error(`No preloaded image found for ${character} with ID ${imgId}`);
+      createFallbackImage(character, resolve);
+      return;
+    }
+
+    // Check if image is already loaded
+    if (preloadedImg.complete && preloadedImg.naturalWidth > 0) {
+      console.log(`Image for ${character} already loaded successfully`, {
+        src: preloadedImg.src,
+        naturalWidth: preloadedImg.naturalWidth,
+        naturalHeight: preloadedImg.naturalHeight
+      });
+      resolve(preloadedImg);
+      return;
+    }
+
+    // Set up load and error handlers
+    const loadHandler = () => {
+      console.log(`Successfully loaded ${character}`, {
+        src: preloadedImg.src,
+        naturalWidth: preloadedImg.naturalWidth,
+        naturalHeight: preloadedImg.naturalHeight
+      });
+      resolve(preloadedImg);
+    };
+
+    const errorHandler = () => {
+      console.error(`Failed to load image for ${character}`, {
+        src: preloadedImg.src,
+        naturalWidth: preloadedImg.naturalWidth,
+        naturalHeight: preloadedImg.naturalHeight
+      });
+      createFallbackImage(character, resolve);
+    };
+
+    preloadedImg.addEventListener('load', loadHandler);
+    preloadedImg.addEventListener('error', errorHandler);
+
+    // Force a reload if the image is in an error state
+    if (preloadedImg.complete && preloadedImg.naturalWidth === 0) {
+      const currentSrc = preloadedImg.src;
+      preloadedImg.src = '';
+      preloadedImg.src = currentSrc;
     }
   });
 }
 
-// Update character selection UI
+function createFallbackImage(character, resolve) {
+  console.log(`Creating fallback image for ${character}`);
+  const canvas = document.createElement('canvas');
+  canvas.width = 64;
+  canvas.height = 64;
+  const ctx = canvas.getContext('2d');
+  
+  // Create a more visible fallback
+  ctx.fillStyle = '#666666';
+  ctx.fillRect(0, 0, 64, 64);
+  
+  // Add a border
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(2, 2, 60, 60);
+  
+  // Add character name
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 12px Arial';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(character, 32, 32);
+  
+  const fallbackImg = new Image();
+  fallbackImg.src = canvas.toDataURL();
+  fallbackImg.onload = () => {
+    console.log(`Fallback image created for ${character}`);
+    resolve(fallbackImg);
+  };
+}
+
+// Update character selection UI with better error handling
 function createCharacterSelectImage(char, container, selectFn) {
   const div = document.createElement('div');
   div.className = 'character-select-wrapper';
@@ -293,9 +332,172 @@ function startGame() {
     // Start game loop
     requestAnimationFrame(gameLoop);
   }).catch(error => {
-    console.error("Failed to load character images. Please check the console for details.");
+    console.error("Failed to load character images:", error);
     alert("Failed to load character images. Please check the console for details.");
   });
+}
+
+// AI behavior patterns
+const AI_PATTERNS = {
+  defensive: {
+    attackRange: 150,
+    retreatRange: 100,
+    jumpProbability: 0.1,
+    attackProbability: 0.4,
+    movementSpeed: 4
+  },
+  aggressive: {
+    attackRange: 200,
+    retreatRange: 50,
+    jumpProbability: 0.15,
+    attackProbability: 0.6,
+    movementSpeed: 6
+  },
+  balanced: {
+    attackRange: 175,
+    retreatRange: 75,
+    jumpProbability: 0.12,
+    attackProbability: 0.5,
+    movementSpeed: 5
+  }
+};
+
+// Enhanced AI handling function
+function handleAI(ai, now) {
+  const target = getCurrentTarget();
+  if (!target) return;
+
+  // Use ultimate when energy is full and target is in range
+  if (ai.energy === 100) {
+    const dx = target.x - ai.x;
+    const dist = Math.abs(dx);
+    if (dist < 300) {  // Only use ultimate when close enough
+      useUltimateClassic(ai, 3);
+      return;
+    }
+  }
+
+  // Select behavior pattern based on difficulty and situation
+  let pattern;
+  if (aiDifficulty === "easy") {
+    pattern = AI_PATTERNS.defensive;
+  } else if (aiDifficulty === "medium") {
+    pattern = AI_PATTERNS.balanced;
+  } else {
+    // Hard AI dynamically switches between patterns based on health
+    pattern = ai.health < 300 ? AI_PATTERNS.defensive :
+             ai.health > 700 ? AI_PATTERNS.aggressive :
+             AI_PATTERNS.balanced;
+  }
+
+  const dx = target.x - ai.x;
+  const dy = target.y - ai.y;
+  const dist = Math.sqrt(dx * dx + dy * dy);
+  ai.facing = dx > 0 ? "right" : "left";
+
+  // Strategic movement
+  if (dist > pattern.attackRange) {
+    // Approach target
+    ai.x += (dx > 0 ? 1 : -1) * pattern.movementSpeed;
+  } else if (dist < pattern.retreatRange) {
+    // Retreat from target
+    ai.x -= (dx > 0 ? 1 : -1) * pattern.movementSpeed;
+  }
+
+  // Jumping logic
+  if (ai.y === groundY) {  // Only jump when on ground
+    if (dy < -30 || Math.random() < pattern.jumpProbability) {
+      ai.vy = -15;
+    }
+  }
+
+  // Attack logic
+  if (dist < pattern.attackRange && now - aiLastAttack >= cooldowns[aiChar]) {
+    if (Math.random() < pattern.attackProbability) {
+      performAttack(ai, aiChar, 3);
+      aiLastAttack = now;
+    }
+  }
+
+  // Dodge projectiles
+  const nearbyProjectiles = projectiles.filter(p => 
+    Math.abs(p.x - ai.x) < 150 && 
+    Math.abs(p.y - ai.y) < 50 &&
+    ((p.vx > 0 && p.x < ai.x) || (p.vx < 0 && p.x > ai.x))
+  );
+  
+  if (nearbyProjectiles.length > 0 && ai.y === groundY) {
+    ai.vy = -15; // Jump to dodge
+  }
+}
+
+// Enhanced Modern AI handling
+function handleAIModern(ai, now) {
+  const target = getCurrentTarget();
+  if (!target || ai.isOut || ai.lives <= 0) return;
+
+  // Use ultimate when energy is full and target is in range
+  if (ai.energy === 100) {
+    const dx = target.x - ai.x;
+    const dist = Math.abs(dx);
+    if (dist < 300) {  // Only use ultimate when close enough
+      useUltimateModern(ai, 3);
+      return;
+    }
+  }
+
+  // Select behavior pattern based on difficulty and situation
+  let pattern;
+  if (aiDifficulty === "easy") {
+    pattern = AI_PATTERNS.defensive;
+  } else if (aiDifficulty === "medium") {
+    pattern = AI_PATTERNS.balanced;
+  } else {
+    // Hard AI dynamically switches between patterns based on lives
+    pattern = ai.lives === 1 ? AI_PATTERNS.defensive :
+             ai.lives === MODERN_LIVES ? AI_PATTERNS.aggressive :
+             AI_PATTERNS.balanced;
+  }
+
+  const dx = target.x - ai.x;
+  const dy = target.y - ai.y;
+  const dist = Math.sqrt(dx * dx + dy * dy);
+  ai.facing = dx > 0 ? "right" : "left";
+
+  // Strategic movement
+  if (dist > pattern.attackRange) {
+    // Approach target
+    ai.x += (dx > 0 ? 1 : -1) * pattern.movementSpeed;
+  } else if (dist < pattern.retreatRange) {
+    // Retreat from target
+    ai.x -= (dx > 0 ? 1 : -1) * pattern.movementSpeed;
+  }
+
+  // Jumping logic
+  if (ai.y === groundY) {  // Only jump when on ground
+    if (dy < -30 || Math.random() < pattern.jumpProbability) {
+      ai.vy = -15;
+    }
+  }
+
+  // Attack logic
+  if (dist < pattern.attackRange && now - aiLastAttack >= cooldowns[aiChar]) {
+    if (Math.random() < pattern.attackProbability) {
+      performAttackModern(ai, aiChar, 3);
+      aiLastAttack = now;
+    }
+  }
+
+  // Dodge projectiles
+  const nearbyProjectiles = projectiles.filter(p => 
+    Math.abs(p.x - ai.x) < 150 && 
+    Math.abs(p.y - ai.y) < 50 &&
+    ((p.vx > 0 && p.x < ai.x) || (p.vx < 0 && p.x > ai.x))
+  );
+  
+  if (nearbyProjectiles.length > 0 && ai.y === groundY) {
+    ai.vy = -15; // Jump to dodge
+  }
 }
 
 function gameLoop(timestamp) {
@@ -305,7 +507,7 @@ function gameLoop(timestamp) {
   
   // Clear canvas
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  
+
   // Draw background
   const bgImg = document.getElementById("fight-background");
   if (bgImg) {
@@ -326,13 +528,13 @@ function gameLoop(timestamp) {
     
     // AI updates for modern mode
     if ((aiEnabled || gameMode === "moderncoop" || gameMode === "modern") && !ai.isOut && ai.lives > 0) {
-      handleAI(ai, now);
+      handleAIModern(ai, now);
       applyGravity(ai);
     }
   } else {
     // Classic mode updates
-    movePlayer(p1, ["a", "d", "w"]);
-    movePlayer(p2, ["ArrowLeft", "ArrowRight", "ArrowUp"]);
+      movePlayer(p1, ["a", "d", "w"]);
+      movePlayer(p2, ["ArrowLeft", "ArrowRight", "ArrowUp"]);
     if (aiEnabled || gameMode === "coop") {
       handleAI(ai, now);
     }
@@ -366,7 +568,7 @@ function gameLoop(timestamp) {
     if (ai.facing === "left") {
       ctx.scale(-1, 1);
       ctx.drawImage(aiImg, -ai.x - 50, ai.y - 50, 100, 100);
-    } else {
+  } else {
       ctx.drawImage(aiImg, ai.x - 50, ai.y - 50, 100, 100);
     }
     ctx.restore();
@@ -397,258 +599,6 @@ function gameLoop(timestamp) {
   
   // Continue game loop
   requestAnimationFrame(gameLoop);
-}
-
-// --- AI TARGETTING ---
-function handleAI(ai, now) {
-  const target = getCurrentTarget();
-  if (!target) return;
-
-  // Use ultimate when energy is full
-  if (ai.energy === 100) {
-    useUltimateClassic(ai, 3);
-    return;
-  }
-
-  // Existing AI logic
-  const dx = target.x - ai.x;
-  const dy = target.y - ai.y;
-  const dist = Math.sqrt(dx * dx + dy * dy);
-  ai.facing = dx > 0 ? "right" : "left";
-
-  if (aiDifficulty === "easy") {
-    if (Math.random() < 0.02 && now - aiLastAttack >= cooldowns[aiChar]) {
-      performAttack(ai, aiChar, 3);
-      aiLastAttack = now;
-    }
-    if (Math.random() < 0.02) ai.vy = -15;
-    if (Math.random() < 0.03) ai.x += dx > 0 ? 5 : -5;
-  } else if (aiDifficulty === "medium") {
-    if (dist < 150 && now - aiLastAttack >= cooldowns[aiChar]) {
-      performAttack(ai, aiChar, 3);
-      aiLastAttack = now;
-    }
-    if (dist > 200) ai.x += dx > 0 ? 5 : -5;
-    if (dy < -50 && ai.y === groundY) ai.vy = -15;
-  } else if (aiDifficulty === "hard") {
-    if (dist < 200 && now - aiLastAttack >= cooldowns[aiChar]) {
-      performAttack(ai, aiChar, 3);
-      aiLastAttack = now;
-    }
-    if (Math.abs(dx) > 100) ai.x += dx > 0 ? 6 : -6;
-    if (dy < -30 && ai.y === groundY) ai.vy = -15;
-    if (dist < 100) ai.x += dx > 0 ? -4 : 4;
-  }
-}
-function handleAIModern(ai, now) {
-  const target = getCurrentTarget();
-  if (!target) return;
-
-  // Use ultimate when energy is full
-  if (ai.energy === 100) {
-    useUltimateModern(ai, 3);
-    return;
-  }
-
-  // Existing AI logic
-  const dx = target.x - ai.x;
-  const dy = target.y - ai.y;
-  const dist = Math.sqrt(dx * dx + dy * dy);
-  ai.facing = dx > 0 ? "right" : "left";
-
-  if (aiDifficulty === "easy") {
-    if (Math.random() < 0.02 && now - aiLastAttack >= cooldowns[aiChar]) {
-      performAttackModern(ai, aiChar, 3);
-      aiLastAttack = now;
-    }
-    if (Math.random() < 0.02) ai.vy = -15;
-    if (Math.random() < 0.03) ai.x += dx > 0 ? 5 : -5;
-  } else if (aiDifficulty === "medium") {
-    if (dist < 150 && now - aiLastAttack >= cooldowns[aiChar]) {
-      performAttackModern(ai, aiChar, 3);
-      aiLastAttack = now;
-    }
-    if (dist > 200) ai.x += dx > 0 ? 5 : -5;
-    if (dy < -50 && ai.y === groundY) ai.vy = -15;
-  } else if (aiDifficulty === "hard") {
-    if (dist < 200 && now - aiLastAttack >= cooldowns[aiChar]) {
-      performAttackModern(ai, aiChar, 3);
-      aiLastAttack = now;
-    }
-    if (Math.abs(dx) > 100) ai.x += dx > 0 ? 6 : -6;
-    if (dy < -30 && ai.y === groundY) ai.vy = -15;
-    if (dist < 100) ai.x += dx > 0 ? -4 : 4;
-  }
-}
-
-// ========== MODERN LOGIC =============
-function movePlayerModern(player, keysList) {
-  if (player.knockback && !player.isOut && player.lives > 0) {
-    player.x += player.knockback * player.knockbackDir;
-    player.knockback *= 0.85;
-    if (Math.abs(player.knockback) < 1) player.knockback = 0;
-    return;
-  }
-  if (keys[keysList[0]]) {
-    player.x = Math.max(-50, player.x - 5);
-    player.facing = "left";
-  }
-  if (keys[keysList[1]]) {
-    player.x = Math.min(canvas.width - 50, player.x + 5);
-    player.facing = "right";
-  }
-  if (keys[keysList[2]] && player.y === groundY) {
-    player.vy = -15;
-  }
-}
-function checkOutOfBounds(player, startX, startY) {
-  if (player.isOut) return;
-  if (player.x < -80 || player.x > canvas.width + 30 ||
-      player.y > canvas.height + 50 || player.y < -120) {
-    player.lives--;
-    if (player.lives <= 0) {
-      player.isOut = true;
-    } else {
-      Object.assign(player, { x: startX, y: startY, percent: 0, vy: 0, knockback: 0, knockbackDir: 0 });
-    }
-  }
-}
-function performAttackModern(player, character, owner) {
-  if (player.isOut || player.lives <= 0) return;
-  const type = getAttackType(character);
-  let targets;
-  if (gameMode === "moderncoop") {
-    if (owner === 1 || owner === 2) targets = [ai];
-    else if (owner === 3) {
-      targets = [];
-      if (p1.lives > 0 && !p1.isOut) targets.push(p1);
-      if (p2.lives > 0 && !p2.isOut) targets.push(p2);
-    }
-  } else {
-    targets = [p1, p2];
-    if (aiEnabled || gameMode === "moderncoop" || gameMode === "modern") targets.push(ai);
-    targets = targets.filter((_, idx) => (idx + 1) !== owner && targets[idx].lives > 0 && !targets[idx].isOut);
-  }
-  if (type === "gun") {
-    shootProjectileModern(player, character, owner);
-  } else {
-    targets.forEach(target => {
-      const range = 100;
-      const inRange = (
-        target.x < player.x + range &&
-        target.x + 100 > player.x &&
-        Math.abs(target.y - player.y) < 50
-      );
-      if (inRange) {
-        takeHitModern(
-          target,
-          type === "sword" ? 30 : 20,
-          player.facing === "right" ? 1 : -1,
-          type === "sword" ? 14 : 10,
-          player
-        );
-      }
-    });
-  }
-}
-function moveProjectilesModern() {
-  projectiles.forEach(p => p.x += p.vx);
-  projectiles = projectiles.filter(p => {
-    let targets;
-    if (gameMode === "moderncoop") {
-      if (p.owner === 1 || p.owner === 2) targets = [ai];
-      else if (p.owner === 3) {
-        targets = [];
-        if (p1.lives > 0 && !p1.isOut) targets.push(p1);
-        if (p2.lives > 0 && !p2.isOut) targets.push(p2);
-      }
-    } else {
-      targets = [p1, p2];
-      if (aiEnabled || gameMode === "moderncoop" || gameMode === "modern") targets.push(ai);
-      targets = targets.filter((_, idx) => (idx + 1) !== p.owner && targets[idx].lives > 0 && !targets[idx].isOut);
-    }
-    let hit = false;
-    for (let i = 0; i < targets.length; i++) {
-      if (checkCollision(p, targets[i]) && targets[i].lives > 0 && !targets[i].isOut) {
-        takeHitModern(
-          targets[i],
-          p.damage,
-          p.vx > 0 ? 1 : -1,
-          p.size >= 15 ? 25 : 10,
-          (p.owner === 1) ? p1 : (p.owner === 2) ? p2 : ai
-        );
-        hit = true;
-        break;
-      }
-    }
-    return !hit && p.x >= 0 && p.x <= canvas.width;
-  });
-  projectiles.forEach(p => {
-    ctx.fillStyle = p.color;
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-    ctx.fill();
-  });
-}
-function takeHitModern(player, damage, attackerDir, baseKnock, attacker) {
-  player.percent += damage;
-  player.knockback = baseKnock * (1 + player.percent / 100);
-  player.knockbackDir = attackerDir;
-  if (attacker) attacker.energy = Math.min(100, (attacker.energy || 0) + 10);
-  player.energy = Math.min(100, (player.energy || 0) + 8);
-}
-
-// --- ULTIMATES ---
-function useUltimateClassic(player, owner) {
-  if (player.health <= 0) return;
-  if (getAttackType(owner === 1 ? p1Char : owner === 2 ? p2Char : aiChar) === "gun") {
-    const vx = player.facing === "right" ? 18 : -18;
-    const x = player.x + (player.facing === "right" ? 100 : 0);
-    projectiles.push({
-      x, y: player.y + 50, vx, size: 20, color: "#ff0", damage: 120, owner
-    });
-  } else {
-    const targets = [];
-    if (owner === 1) { if (ai.health > 0) targets.push(ai); if (p2.health > 0) targets.push(p2);}
-    if (owner === 2) { if (ai.health > 0) targets.push(ai); if (p1.health > 0) targets.push(p1);}
-    if (owner === 3) { if (p1.health > 0) targets.push(p1); if (p2.health > 0) targets.push(p2);}
-    targets.forEach(target => {
-      if (target.health > 0) {
-        target.health -= 100;
-        target.knockback = 28;
-        target.knockbackDir = (target.x < player.x) ? -1 : 1;
-      }
-    });
-  }
-  player.energy = 0;
-  updateEnergyBars();
-}
-function useUltimateModern(player, owner) {
-  if (player.isOut || player.lives <= 0) return;
-  if (getAttackType(owner === 1 ? p1Char : owner === 2 ? p2Char : aiChar) === "gun") {
-    const vx = player.facing === "right" ? 18 : -18;
-    const x = player.x + (player.facing === "right" ? 100 : 0);
-    projectiles.push({
-      x, y: player.y + 50, vx, size: 20, color: "#ff0", damage: 70, owner
-    });
-  } else {
-    const targets = [];
-    if (owner === 1) { if (ai.lives > 0 && !ai.isOut) targets.push(ai); if (p2.lives > 0 && !p2.isOut) targets.push(p2);}
-    if (owner === 2) { if (ai.lives > 0 && !ai.isOut) targets.push(ai); if (p1.lives > 0 && !p1.isOut) targets.push(p1);}
-    if (owner === 3) { if (p1.lives > 0 && !p1.isOut) targets.push(p1); if (p2.lives > 0 && !p2.isOut) targets.push(p2);}
-    targets.forEach(target => {
-      takeHitModern(target, 55, (target.x < player.x) ? -1 : 1, 28, player);
-    });
-  }
-  player.energy = 0;
-  updateEnergyBars();
-}
-function shootProjectileModern(player, char, owner) {
-  if (player.isOut || player.lives <= 0) return;
-  const { color, size, speed, damage } = getCharacterProjectile(char);
-  let vx = player.facing === "right" ? speed : -speed;
-  const x = player.x + (player.facing === "right" ? 100 : 0);
-  projectiles.push({ x, y: player.y + 50, vx, size, color, damage, owner });
 }
 
 // === CLASSIC LOGIC ===
