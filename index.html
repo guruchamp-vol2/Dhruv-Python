@@ -7,6 +7,77 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+  <!-- Preload all game images -->
+  <div id="image-preload" style="display: none;">
+    <img id="mario-img" src="./images/mario.png" alt="mario" onerror="console.error('Failed to load:', this.src)">
+    <img id="luigi-img" src="./images/luigi.png" alt="luigi" onerror="console.error('Failed to load:', this.src)">
+    <img id="kirby-img" src="./images/kirby.png" alt="kirby" onerror="console.error('Failed to load:', this.src)">
+    <img id="sonic-img" src="./images/sonic.png" alt="sonic" onerror="console.error('Failed to load:', this.src)">
+    <img id="tails-img" src="./images/Tails.png" alt="tails" onerror="console.error('Failed to load:', this.src)">
+    <img id="shadow-img" src="./images/shadow.png" alt="shadow" onerror="console.error('Failed to load:', this.src)">
+    <img id="toriel-img" src="./images/toriel.png" alt="toriel" onerror="console.error('Failed to load:', this.src)">
+    <img id="sans-img" src="./images/sans.png" alt="sans" onerror="console.error('Failed to load:', this.src)">
+    <img id="mettaton-img" src="./images/Mettaton.png" alt="mettaton" onerror="console.error('Failed to load:', this.src)">
+    <img id="kris-img" src="./images/kris.png" alt="kris" onerror="console.error('Failed to load:', this.src)">
+    <img id="susie-img" src="./images/susie.png" alt="susie" onerror="console.error('Failed to load:', this.src)">
+    <img id="jevil-img" src="./images/jevil.png" alt="jevil" onerror="console.error('Failed to load:', this.src)">
+    <img id="spadeking-img" src="./images/spadeking.png" alt="spadeking" onerror="console.error('Failed to load:', this.src)">
+    <img id="berdly-img" src="./images/berdly.png" alt="berdly" onerror="console.error('Failed to load:', this.src)">
+    <img id="noelle-img" src="./images/noelle.png" alt="noelle" onerror="console.error('Failed to load:', this.src)">
+    <img id="spamton-img" src="./images/spamton.png" alt="spamton" onerror="console.error('Failed to load:', this.src)">
+    <img id="fight-background" src="./images/fight-background.jpg" alt="background" onerror="console.error('Failed to load:', this.src)">
+  </div>
+
+  <script>
+    // Debug image loading and fix URLs
+    document.addEventListener('DOMContentLoaded', () => {
+      const images = document.querySelectorAll('#image-preload img');
+      images.forEach(img => {
+        // Add load/error handlers
+        img.onerror = () => {
+          console.error(`Failed to load image: ${img.id}`, {
+            src: img.src,
+            naturalWidth: img.naturalWidth,
+            naturalHeight: img.naturalHeight,
+            complete: img.complete
+          });
+          // Try alternative paths
+          const paths = [
+            `images/${img.alt}.png`,
+            `/images/${img.alt}.png`,
+            `../images/${img.alt}.png`,
+            `../../images/${img.alt}.png`
+          ];
+          
+          function tryNextPath(index) {
+            if (index >= paths.length) {
+              console.error(`All paths failed for ${img.id}`);
+              return;
+            }
+            console.log(`Trying alternative path for ${img.id}:`, paths[index]);
+            img.src = paths[index];
+          }
+          
+          let pathIndex = 0;
+          img.onerror = () => {
+            pathIndex++;
+            tryNextPath(pathIndex);
+          };
+          tryNextPath(pathIndex);
+        };
+        
+        img.onload = () => {
+          console.log(`Successfully loaded image: ${img.id}`, {
+            src: img.src,
+            naturalWidth: img.naturalWidth,
+            naturalHeight: img.naturalHeight,
+            complete: img.complete
+          });
+        };
+      });
+    });
+  </script>
+
   <div id="character-select">
     <h2>Select Characters</h2>
     <div id="mode-select" style="margin-bottom:20px;">
