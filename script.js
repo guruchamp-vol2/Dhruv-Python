@@ -51,8 +51,7 @@ let isOnlineGame = false;
 const BASE_URL = (() => {
   const isGitHub = window.location.hostname.includes('github.io');
   if (isGitHub) {
-    // Remove URL encoding from the path
-    return 'https://guruchamp-vol2.github.io/Dhruv-Python/game to be name/';
+    return 'https://guruchamp-vol2.github.io/Dhruv-Python/';
   }
   return '/';
 })();
@@ -891,8 +890,8 @@ function startOnlineGame(players) {
   // Set character images using the mapping
   const p1Char = isPlayer1 ? players[0].character : players[1].character;
   const p2Char = isPlayer1 ? players[1].character : players[0].character;
-  p1Img.src = `images/${characterImages[p1Char]}`;
-  p2Img.src = `images/${characterImages[p2Char]}`;
+  p1Img.src = characterImages[p1Char];
+  p2Img.src = characterImages[p2Char];
   
   gameLoop();
 }
