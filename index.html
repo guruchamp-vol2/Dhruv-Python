@@ -41,12 +41,11 @@
             naturalHeight: img.naturalHeight,
             complete: img.complete
           });
-          // Try alternative paths with correct case
+          // Try alternative paths
           const filename = img.src.split('/').pop();
           const paths = [
             filename,
-            './' + filename,
-            '../' + filename
+            './' + filename
           ];
           
           function tryNextPath(index) {

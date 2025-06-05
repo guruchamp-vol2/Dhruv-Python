@@ -61,22 +61,22 @@ console.log('Using BASE_URL:', BASE_URL);
 
 // Character image configuration with exact filenames
 const characterImages = {
-  mario: "mario.png",
-  luigi: "luigi.png",
-  kirby: "kirby.png",
-  sonic: "sonic.png",
-  tails: "Tails.png",      // Note the capital T
-  shadow: "shadow.png",
-  toriel: "toriel.png",
-  sans: "sans.png",
-  mettaton: "Mettaton.png", // Note the capital M
-  kris: "kris.png",
-  susie: "susie.png",
-  jevil: "jevil.png",
-  spadeking: "spadeking.png",
-  berdly: "berdly.png",
-  noelle: "noelle.png",
-  spamton: "spamton.png"
+  mario: 'mario.png',
+  luigi: 'luigi.png',
+  kirby: 'kirby.png',
+  sonic: 'sonic.png',
+  tails: 'Tails.png',
+  shadow: 'shadow.png',
+  toriel: 'toriel.png',
+  sans: 'sans.png',
+  mettaton: 'Mettaton.png',
+  kris: 'kris.png',
+  susie: 'susie.png',
+  jevil: 'jevil.png',
+  spadeking: 'spadeking.png',
+  berdly: 'berdly.png',
+  noelle: 'noelle.png',
+  spamton: 'spamton.png'
 };
 
 // Initialize image objects
