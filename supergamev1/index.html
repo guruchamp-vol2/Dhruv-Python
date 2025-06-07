@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>2D Fighting Game</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      background: #000;
+      color: white;
+      font-family: Arial, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    #game-container {
+      position: relative;
+      width: 800px;
+      height: 600px;
+      margin: 20px auto;
+      background: #4a0072;
+      border: 2px solid red;
+      overflow: visible;
+    }
+    
+    #gameCanvas {
+      position: relative;
+      display: block;
+      width: 800px;
+      height: 600px;
+      background: transparent;
+      image-rendering: -moz-crisp-edges;
+      image-rendering: -webkit-crisp-edges;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+    }
+    
+    .hud {
+      position: relative;
+      padding: 10px;
+      background: rgba(0,0,0,0.8);
+      text-align: center;
+      z-index: 2;
+      pointer-events: none;
+    }
+    
+    #character-select {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 100%;
+      max-width: 800px;
+      padding: 20px;
+      background: rgba(0, 0, 0, 0.9);
+      text-align: center;
+      z-index: 3;
+    }
+    
+    .character-row {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      margin: 10px 0;
+    }
+    
+    .character-select-img {
+      width: 80px;
+      height: 80px;
+      cursor: pointer;
+      border: 2px solid transparent;
+      background: #333;
+      transition: border-color 0.3s;
+    }
+    
+    .character-select-img:hover {
+      border-color: #666;
+    }
+    
+    .character-select-img.selected {
+      border-color: yellow;
+    }
+    
+    .energy-bar {
+      width: 200px;
+      height: 20px;
+      background: #333;
+      margin: 5px auto;
+      border: 1px solid #666;
+    }
+    
+    .energy-fill {
+      height: 100%;
+      width: 0%;
+      background: yellow;
+      transition: width 0.3s;
+    }
+    
+    #game-over {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0, 0, 0, 0.9);
+      padding: 20px;
+      border: 2px solid red;
+      text-align: center;
+      z-index: 10;
+      display: none;
+    }
+    
+    #debug {
+      position: fixed;
+      bottom: 10px;
+      left: 10px;
+      background: rgba(0,0,0,0.8);
+      padding: 10px;
+      font-family: monospace;
+      z-index: 1000;
+      max-width: 600px;
+      max-height: 300px;
+      overflow-y: auto;
+      word-wrap: break-word;
+      color: #00ff00;
+      border: 1px solid #00ff00;
+    }
+    
+    /* Ensure images are loaded before showing content */
+    .loading * {
+      visibility: hidden;
+    }
+    
+    .loading::after {
+      content: 'Loading...';
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 24px;
+      color: white;
+      visibility: visible;
+    }
+
+    /* Add debug canvas */
+    #debugCanvas {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      width: 200px;
+      height: 150px;
+      border: 2px solid red;
+      z-index: 1000;
+      background: rgba(0,0,0,0.8);
+    }
+
+    /* Add rendering status indicator */
+    #renderStatus {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      background: rgba(0,0,0,0.8);
+      padding: 5px 10px;
+      font-family: monospace;
+      z-index: 1000;
+      color: #00ff00;
+      border: 1px solid #00ff00;
+    }
+
+    #diagnostic-overlay {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      background: rgba(0, 0, 0, 0.9);
+      border: 2px solid #00ff00;
+      padding: 10px;
+      z-index: 1000;
+      display: none;
+      max-width: 800px;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+    
+    .diagnostic-row {
+      display: flex;
+      align-items: center;
+      margin: 10px 0;
+      padding: 5px;
+      border: 1px solid #333;
+    }
+    
+    .diagnostic-cell {
+      margin: 0 10px;
+      text-align: center;
+    }
+    
+    .diagnostic-cell canvas {
+      border: 1px solid red;
+    }
+    
+    .diagnostic-cell img {
+      border: 1px solid yellow;
+    }
+
+    #debug-images {
+      position: fixed;
+      bottom: 10px;
+      right: 10px;
+      background: rgba(0,0,0,0.8);
+      padding: 10px;
+      border: 1px solid #00ff00;
+      color: #00ff00;
+      font-family: monospace;
+      max-width: 300px;
+      max-height: 200px;
+      overflow-y: auto;
+      z-index: 1000;
+    }
+    .image-preview {
+      width: 50px;
+      height: 50px;
+      object-fit: contain;
+      background: #333;
+      margin: 2px;
+      border: 1px solid #666;
+    }
+  </style>
+</head>
+<body class="loading">
+  <!-- Debug Panels -->
+  <div id="debug" style="display: block !important;">Loading...</div>
+  <div id="debug-images">Image Loading Status...</div>
+
+  <!-- Game Container -->
+  <div id="game-container">
+    <!-- Canvas with explicit dimensions -->
+    <canvas id="gameCanvas" width="800" height="600" style="border: 2px solid yellow;"></canvas>
+    
+    <!-- HUD -->
+    <div class="hud">
+      <div id="p1-health">Player 1: 1000</div>
+      <div class="energy-bar"><div id="p1-energy" class="energy-fill"></div></div>
+      <div id="p2-health">Player 2: 1000</div>
+      <div class="energy-bar"><div id="p2-energy" class="energy-fill"></div></div>
+      <div id="ai-health">AI: 1000</div>
+      <div class="energy-bar"><div id="ai-energy" class="energy-fill"></div></div>
+    </div>
+  </div>
+
+  <!-- Character Select -->
+  <div id="character-select">
+    <h2>Select Characters</h2>
+    <div style="margin-bottom:20px;">
+      <label><strong>Mode:</strong></label>
+      <select id="game-mode">
+        <option value="versus">Classic</option>
+        <option value="coop">Classic Co-op</option>
+        <option value="modern">Modern</option>
+        <option value="moderncoop">Modern Co-op</option>
+        <option value="onlineclassic">Online Classic (Beta)</option>
+        <option value="onlinemodern">Online Modern (Beta)</option>
+      </select>
+    </div>
+    
+    <div class="character-row" id="p1-characters"></div>
+    <div class="character-row" id="p2-characters"></div>
+    <div class="character-row" id="ai-characters"></div>
+    
+    <div style="margin-top:20px;">
+      <label><strong>AI Opponent:</strong></label>
+      <input type="checkbox" id="ai-enabled" checked>AI ON
+    </div>
+    
+    <div style="margin-top:10px;">
+      <label><strong>AI Difficulty:</strong></label>
+      <input type="radio" name="difficulty" value="easy">Easy
+      <input type="radio" name="difficulty" value="medium" checked>Medium
+      <input type="radio" name="difficulty" value="hard">Hard
+    </div>
+    
+    <div style="margin-top:10px;">
+      <button onclick="toggleDebug()" style="background: #333; color: #0f0; border: 1px solid #0f0; padding: 5px 10px;">
+        Toggle Debug View
+      </button>
+    </div>
+    
+    <button id="start-game" style="margin-top:20px; padding: 10px 20px;">Start Game</button>
+  </div>
+
+  <!-- Game Over Screen -->
+  <div id="game-over">
+    <h2>Game Over</h2>
+    <div id="winner-text"></div>
+    <button onclick="location.reload()" style="margin-top: 20px; padding: 10px 20px;">Play Again</button>
+  </div>
+
+  <!-- Simplified image preloading -->
+  <div id="preload-container" style="display:none;">
+    <img id="mario-img" src="./mario.png" alt="mario">
+    <img id="luigi-img" src="./luigi.png" alt="luigi">
+    <img id="kirby-img" src="./kirby.png" alt="kirby">
+    <img id="sonic-img" src="./sonic.png" alt="sonic">
+    <img id="tails-img" src="./Tails.png" alt="tails">
+    <img id="shadow-img" src="./shadow.png" alt="shadow">
+    <img id="toriel-img" src="./toriel.png" alt="toriel">
+    <img id="sans-img" src="./sans.png" alt="sans">
+    <img id="mettaton-img" src="./Mettaton.png" alt="mettaton">
+    <img id="kris-img" src="./kris.png" alt="kris">
+    <img id="susie-img" src="./susie.png" alt="susie">
+    <img id="jevil-img" src="./jevil.png" alt="jevil">
+    <img id="spadeking-img" src="./spadeking.png" alt="spadeking">
+    <img id="berdly-img" src="./berdly.png" alt="berdly">
+    <img id="noelle-img" src="./noelle.png" alt="noelle">
+    <img id="spamton-img" src="./spamton.png" alt="spamton">
+  </div>
+
+  <!-- Loading Overlay -->
+  <div id="loading-overlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999;">
+    <h2 style="color: #00ff00;">Loading Game Assets</h2>
+    <div id="loading-progress" style="color: #00ff00; font-family: monospace; margin: 10px 0;"></div>
+    <div id="loading-errors" style="color: #ff0000; font-family: monospace; margin: 10px 0; max-height: 100px; overflow-y: auto;"></div>
+  </div>
+
+  <!-- Test Canvas -->
+  <canvas id="testCanvas" style="display: none;" width="100" height="100"></canvas>
+
+  <!-- Add diagnostic overlay -->
+  <div id="diagnostic-overlay">
+    <h3 style="color: #00ff00;">Image Diagnostic</h3>
+    <div id="diagnostic-content"></div>
+    <button onclick="runDiagnostic()" style="margin: 10px;">Refresh Diagnostic</button>
+    <button onclick="document.getElementById('diagnostic-overlay').style.display='none'" style="margin: 10px;">Close</button>
+  </div>
+  
+  <!-- Add diagnostic button -->
+  <button onclick="showDiagnostic()" style="position: fixed; top: 10px; right: 10px; z-index: 999; background: #333; color: #0f0; border: 1px solid #0f0; padding: 5px 10px;">
+    Show Image Diagnostic
+  </button>
+
+  <script>
+    // Immediate execution to verify canvas support
+    (function() {
+      const testCanvas = document.getElementById('testCanvas');
+      const ctx = testCanvas.getContext('2d');
+      
+      if (!ctx) {
+        document.body.innerHTML = '<div style="color: red; padding: 20px;">Your browser does not support canvas</div>';
+        throw new Error('Canvas not supported');
+      }
+
+      // Test basic drawing
+      ctx.fillStyle = 'red';
+      ctx.fillRect(0, 0, 10, 10);
+      
+      try {
+        const imageData = ctx.getImageData(0, 0, 1, 1);
+        if (imageData.data[0] !== 255) {
+          throw new Error('Canvas drawing not working correctly');
+        }
+      } catch (e) {
+        document.body.innerHTML = '<div style="color: red; padding: 20px;">Canvas drawing error: ' + e.message + '</div>';
+        throw e;
+      }
+    })();
+  </script>
+  <script src="script.js"></script>
+</body>
+</html>
