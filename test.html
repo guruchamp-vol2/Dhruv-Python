@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Canvas Test</title>
+    <style>
+        body {
+            margin: 0;
+            background: black;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            color: white;
+            font-family: Arial, sans-serif;
+        }
+        #debug {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.8);
+            padding: 10px;
+            border: 1px solid #666;
+            max-width: 500px;
+            word-wrap: break-word;
+        }
+        canvas {
+            border: 2px solid red;
+            margin: 20px;
+        }
+        #controls {
+            margin-top: 20px;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 0 5px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div id="debug">Initializing...</div>
+    <canvas id="testCanvas" width="800" height="600"></canvas>
+    <div id="controls">
+        <button onclick="testPattern()">Draw Test Pattern</button>
+        <button onclick="testAnimation()">Start Animation</button>
+        <button onclick="clearCanvas()">Clear Canvas</button>
+    </div>
+    
+    <script>
+        const debug = document.getElementById('debug');
+        let animationId = null;
+        
+        function log(message, data = null) {
+            const text = data ? `${message}\n${JSON.stringify(data, null, 2)}` : message;
+            debug.innerHTML = `<pre>${text}</pre>`;
+            console.log(message, data);
+        }
+        
+        function handleError(error, context) {
+            const message = `Error in ${context}: ${error.message}\nStack: ${error.stack}`;
+            log(message);
+            console.error(error);
+        }
+        
+        function clearCanvas() {
+            try {
+                if (animationId) {
+                    cancelAnimationFrame(animationId);
+                    animationId = null;
+                }
+                
+                const canvas = document.getElementById('testCanvas');
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#4a0072';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                log('Canvas cleared');
+            } catch (error) {
+                handleError(error, 'clearCanvas');
+            }
+        }
+        
+        function testPattern() {
+            try {
+                const canvas = document.getElementById('testCanvas');
+                const ctx = canvas.getContext('2d');
+                
+                // Clear canvas
+                clearCanvas();
+                
+                // Draw shapes
+                ctx.fillStyle = '#FF0000';
+                ctx.fillRect(100, 100, 100, 100);
+                
+                ctx.fillStyle = '#00FF00';
+                ctx.beginPath();
+                ctx.arc(400, 300, 50, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.fillStyle = '#0000FF';
+                ctx.beginPath();
+                ctx.moveTo(600, 400);
+                ctx.lineTo(700, 400);
+                ctx.lineTo(650, 300);
+                ctx.closePath();
+                ctx.fill();
+                
+                ctx.fillStyle = '#FFFFFF';
+                ctx.font = '30px Arial';
+                ctx.fillText('Canvas Test', 350, 100);
+                
+                // Log success
+                log('Test pattern drawn', {
+                    canvasWidth: canvas.width,
+                    canvasHeight: canvas.height,
+                    contextExists: !!ctx,
+                    contextLost: ctx.isContextLost?.(),
+                    computed: window.getComputedStyle(canvas)
+                });
+            } catch (error) {
+                handleError(error, 'testPattern');
+            }
+        }
+        
+        function testAnimation() {
+            try {
+                if (animationId) {
+                    cancelAnimationFrame(animationId);
+                }
+                
+                const canvas = document.getElementById('testCanvas');
+                const ctx = canvas.getContext('2d');
+                let y = 0;
+                
+                function animate() {
+                    try {
+                        // Clear canvas
+                        ctx.fillStyle = '#4a0072';
+                        ctx.fillRect(0, 0, canvas.width, canvas.height);
+                        
+                        // Draw bouncing square
+                        ctx.fillStyle = '#FFFFFF';
+                        ctx.fillRect(350, y, 100, 100);
+                        
+                        // Update position
+                        y = (y + 2) % canvas.height;
+                        
+                        // Continue animation
+                        animationId = requestAnimationFrame(animate);
+                    } catch (error) {
+                        handleError(error, 'animation frame');
+                        cancelAnimationFrame(animationId);
+                    }
+                }
+                
+                // Start animation
+                animate();
+                log('Animation started');
+            } catch (error) {
+                handleError(error, 'testAnimation');
+            }
+        }
+        
+        // Initialize on load
+        document.addEventListener('DOMContentLoaded', function() {
+            try {
+                const canvas = document.getElementById('testCanvas');
+                const ctx = canvas.getContext('2d');
+                
+                // Test initial drawing
+                clearCanvas();
+                
+                log('Canvas initialized', {
+                    width: canvas.width,
+                    height: canvas.height,
+                    context: !!ctx,
+                    contextType: ctx ? 'available' : 'null',
+                    style: window.getComputedStyle(canvas),
+                    viewport: {
+                        width: window.innerWidth,
+                        height: window.innerHeight
+                    }
+                });
+                
+                // Add canvas error handlers
+                canvas.addEventListener('webglcontextlost', function(e) {
+                    log('Canvas context lost', e);
+                });
+                
+                canvas.addEventListener('webglcontextrestored', function(e) {
+                    log('Canvas context restored', e);
+                    clearCanvas();
+                });
+            } catch (error) {
+                handleError(error, 'initialization');
+            }
+        });
+    </script>
+</body>
+</html> 

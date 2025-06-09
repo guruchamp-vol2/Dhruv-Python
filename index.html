@@ -1,137 +1,604 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=800, initial-scale=1.0"/>
-  <title>2D Fighting Game</title>
-  <link rel="stylesheet" href="style.css" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Super Game V1 - Ultimate Fighting Game</title>
+    <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: white;
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(255, 77, 77, 0.1), rgba(255, 204, 0, 0.1));
+            opacity: 0.1;
+            z-index: -1;
+        }
+
+        .header {
+            background: rgba(0, 0, 0, 0.8);
+            padding: 1rem;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            border-bottom: 2px solid #ff4d4d;
+        }
+
+        .logo {
+            font-family: 'Bangers', cursive;
+            font-size: 4.5rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            background: linear-gradient(45deg, #ff4d4d, #ffcc00);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin: 20px 0;
+            text-shadow: 4px 4px 8px rgba(0, 0, 0, 0.5);
+            letter-spacing: 3px;
+            animation: logoGlow 2s infinite;
+        }
+
+        @keyframes logoGlow {
+            0%, 100% { filter: drop-shadow(0 0 15px rgba(255, 77, 77, 0.7)); }
+            50% { filter: drop-shadow(0 0 25px rgba(255, 204, 0, 0.7)); }
+        }
+
+        .hero {
+            height: 70vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(45deg, #1a1a2e, #16213e);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(5px);
+        }
+
+        .hero-content {
+            text-align: center;
+            position: relative;
+            z-index: 1;
+            padding: 2rem;
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 20px;
+            border: 2px solid rgba(255, 77, 77, 0.3);
+            box-shadow: 0 0 30px rgba(255, 77, 77, 0.2);
+            width: 80%;
+            max-width: 800px;
+        }
+
+        .hero-title {
+            font-family: 'Bangers', cursive;
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            color: #ffcc00;
+            text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.5);
+        }
+
+        .game-modes {
+            margin: 20px 0;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            padding: 20px;
+        }
+
+        .mode-button {
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 204, 0, 0.3);
+            border-radius: 10px;
+            color: #ffcc00;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'Poppins', sans-serif;
+            font-weight: 600;
+        }
+
+        .mode-button:hover, .mode-button.active {
+            background: rgba(255, 204, 0, 0.2);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 204, 0, 0.3);
+        }
+
+        .player-select {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .player-section {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 20px;
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .player-section h3 {
+            color: #ffcc00;
+            margin-bottom: 15px;
+            font-family: 'Bangers', cursive;
+            font-size: 1.5rem;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        .ai-controls {
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+        }
+
+        .difficulty-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+            justify-content: center;
+        }
+
+        .difficulty-button {
+            padding: 5px 15px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 5px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .difficulty-button:hover, .difficulty-button.active {
+            background: rgba(255, 204, 0, 0.2);
+            color: #ffcc00;
+        }
+
+        .health-display {
+            font-family: 'Bangers', cursive;
+            font-size: 1.2rem;
+            color: #ff4d4d;
+            margin-top: 10px;
+        }
+
+        .play-button {
+            padding: 20px 50px;
+            font-size: 1.8rem;
+            background: linear-gradient(45deg, #ff4d4d, #ffcc00);
+            border: none;
+            border-radius: 50px;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            font-weight: bold;
+            margin-top: 20px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(255, 77, 77, 0.4);
+        }
+
+        .play-button::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            transform: rotate(45deg);
+            animation: buttonShine 3s infinite;
+        }
+
+        @keyframes buttonShine {
+            0% { transform: translateX(-100%) rotate(45deg); }
+            100% { transform: translateX(100%) rotate(45deg); }
+        }
+
+        .play-button:hover {
+            transform: translateY(-5px) scale(1.05);
+            box-shadow: 0 8px 25px rgba(255, 77, 77, 0.6);
+        }
+
+        .characters {
+            padding: 50px 20px;
+            text-align: center;
+            background: rgba(0, 0, 0, 0.5);
+            position: relative;
+        }
+
+        .character-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 30px;
+            max-width: 1400px;
+            margin: 30px auto;
+            padding: 20px;
+        }
+
+        .character-card {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            transition: all 0.4s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .character-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            transform: translateX(-100%);
+            transition: 0.5s;
+        }
+
+        .character-card:hover::before {
+            transform: translateX(100%);
+        }
+
+        .character-card:hover {
+            transform: translateY(-10px) scale(1.03);
+            background: rgba(255, 255, 255, 0.2);
+            border-color: rgba(255, 204, 0, 0.5);
+            box-shadow: 0 10px 30px rgba(255, 204, 0, 0.2);
+        }
+
+        .character-card img {
+            width: 150px;
+            height: 150px;
+            object-fit: contain;
+            margin-bottom: 15px;
+            transition: transform 0.3s ease;
+            filter: drop-shadow(0 5px 10px rgba(0, 0, 0, 0.5));
+        }
+
+        .character-card:hover img {
+            transform: scale(1.1);
+        }
+
+        .character-name {
+            font-family: 'Bangers', cursive;
+            font-size: 1.5rem;
+            color: #ffcc00;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            letter-spacing: 1px;
+        }
+
+        .section-title {
+            font-family: 'Bangers', cursive;
+            font-size: 3.5rem;
+            margin-bottom: 40px;
+            color: #ffcc00;
+            text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.5);
+            letter-spacing: 2px;
+            position: relative;
+            display: inline-block;
+        }
+
+        .section-title::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100px;
+            height: 4px;
+            background: linear-gradient(90deg, #ff4d4d, #ffcc00);
+            border-radius: 2px;
+        }
+
+        .footer {
+            background: rgba(0, 0, 0, 0.9);
+            padding: 20px;
+            text-align: center;
+            position: relative;
+            bottom: 0;
+            width: 100%;
+            border-top: 2px solid #ff4d4d;
+        }
+
+        #gameCanvas {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            max-width: 100%;
+            max-height: 100%;
+            z-index: 1000;
+        }
+
+        @media (max-width: 768px) {
+            .logo {
+                font-size: 3rem;
+            }
+            .hero-title {
+                font-size: 2rem;
+            }
+            .play-button {
+                padding: 15px 30px;
+                font-size: 1.4rem;
+            }
+            .character-grid {
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+                gap: 20px;
+            }
+            .character-card img {
+                width: 100px;
+                height: 100px;
+            }
+        }
+    </style>
 </head>
 <body>
-  <!-- Preload all game images -->
-  <div id="image-preload" style="display: none;">
-    <img id="mario-img" src="mario.png" alt="mario" onerror="console.error('Failed to load:', this.src)">
-    <img id="luigi-img" src="luigi.png" alt="luigi" onerror="console.error('Failed to load:', this.src)">
-    <img id="kirby-img" src="kirby.png" alt="kirby" onerror="console.error('Failed to load:', this.src)">
-    <img id="sonic-img" src="sonic.png" alt="sonic" onerror="console.error('Failed to load:', this.src)">
-    <img id="tails-img" src="Tails.png" alt="tails" onerror="console.error('Failed to load:', this.src)">
-    <img id="shadow-img" src="shadow.png" alt="shadow" onerror="console.error('Failed to load:', this.src)">
-    <img id="toriel-img" src="toriel.png" alt="toriel" onerror="console.error('Failed to load:', this.src)">
-    <img id="sans-img" src="sans.png" alt="sans" onerror="console.error('Failed to load:', this.src)">
-    <img id="mettaton-img" src="Mettaton.png" alt="mettaton" onerror="console.error('Failed to load:', this.src)">
-    <img id="kris-img" src="kris.png" alt="kris" onerror="console.error('Failed to load:', this.src)">
-    <img id="susie-img" src="susie.png" alt="susie" onerror="console.error('Failed to load:', this.src)">
-    <img id="jevil-img" src="jevil.png" alt="jevil" onerror="console.error('Failed to load:', this.src)">
-    <img id="spadeking-img" src="spadeking.png" alt="spadeking" onerror="console.error('Failed to load:', this.src)">
-    <img id="berdly-img" src="berdly.png" alt="berdly" onerror="console.error('Failed to load:', this.src)">
-    <img id="noelle-img" src="noelle.png" alt="noelle" onerror="console.error('Failed to load:', this.src)">
-    <img id="spamton-img" src="spamton.png" alt="spamton" onerror="console.error('Failed to load:', this.src)">
-    <img id="fight-background" src="fight-background.jpg" alt="background" onerror="console.error('Failed to load:', this.src)">
-  </div>
+    <div class="header">
+        <h1 class="logo">Super Game V1</h1>
+    </div>
 
-  <script>
-    // Debug image loading and fix URLs
-    document.addEventListener('DOMContentLoaded', () => {
-      const images = document.querySelectorAll('#image-preload img');
-      images.forEach(img => {
-        // Add load/error handlers
-        img.onerror = () => {
-          console.error(`Failed to load image: ${img.id}`, {
-            src: img.src,
-            naturalWidth: img.naturalWidth,
-            naturalHeight: img.naturalHeight,
-            complete: img.complete
-          });
-          // Try alternative paths
-          const filename = img.src.split('/').pop();
-          const paths = [
-            filename,
-            './' + filename
-          ];
-          
-          function tryNextPath(index) {
-            if (index >= paths.length) {
-              console.error(`All paths failed for ${img.id}`);
-              return;
-            }
-            console.log(`Trying alternative path for ${img.id}:`, paths[index]);
-            img.src = paths[index];
-          }
-          
-          let pathIndex = 0;
-          img.onerror = () => {
-            pathIndex++;
-            tryNextPath(pathIndex);
-          };
-          tryNextPath(pathIndex);
-        };
-        
-        img.onload = () => {
-          console.log(`Successfully loaded image: ${img.id}`, {
-            src: img.src,
-            naturalWidth: img.naturalWidth,
-            naturalHeight: img.naturalHeight,
-            complete: img.complete
-          });
-        };
-      });
-    });
-  </script>
+    <div class="hero">
+        <div class="hero-content">
+            <h2 class="hero-title">Epic Battles Await!</h2>
+            
+            <div class="game-modes">
+                <button class="mode-button active">Classic</button>
+                <button class="mode-button">Classic Co-op</button>
+                <button class="mode-button">Modern</button>
+                <button class="mode-button">Modern Co-op</button>
+                <button class="mode-button">Online Classic (Beta)</button>
+                <button class="mode-button">Online Modern (Beta)</button>
+            </div>
 
-  <div id="character-select">
-    <h2>Select Characters</h2>
-    <div id="mode-select" style="margin-bottom:20px;">
-      <label><strong>Mode:</strong></label>
-      <select id="game-mode">
-        <option value="versus" selected>Classic</option>
-        <option value="coop">Classic Co-op</option>
-        <option value="modern">Modern</option>
-        <option value="moderncoop">Modern Co-op</option>
-        <option value="onlineclassic">Online Classic (Beta)</option>
-        <option value="onlinemodern">Online Modern (Beta)</option>
-      </select>
-    </div>
-    <div class="player-label">Player 1</div>
-    <div id="p1-characters" class="character-row"></div>
-    <div class="player-label">Player 2</div>
-    <div id="p2-characters" class="character-row"></div>
-    <div class="player-label">AI Player</div>
-    <div id="ai-characters" class="character-row"></div>
-    <div style="margin:10px 0;">
-      <label><strong>AI Opponent:</strong></label>
-      <input type="checkbox" id="ai-toggle" checked>
-      <label for="ai-toggle">AI ON</label>
-    </div>
-    <div style="margin: 10px 0;">
-      <label for="ai-difficulty"><strong>AI Difficulty:</strong></label>
-      <select id="ai-difficulty">
-        <option value="easy">Easy</option>
-        <option value="medium" selected>Medium</option>
-        <option value="hard">Hard</option>
-      </select>
-    </div>
-    <button id="start-game" disabled>Start Game</button>
-  </div>
+            <div class="player-select">
+                <div class="player-section">
+                    <h3>Player 1</h3>
+                    <div class="health-display">Health: 1000</div>
+                </div>
+                
+                <div class="player-section">
+                    <h3>Player 2</h3>
+                    <div class="health-display">Health: 1000</div>
+                </div>
 
-  <div id="game-screen" style="display: none;">
-    <div id="hud">
-      <div id="p1-health">Player 1: 1000</div>
-      <div id="p2-health">Player 2: 1000</div>
-      <div id="ai-health">AI: 1000</div>
-      <div id="energy-bars">
-        <div id="p1-energy"></div>
-        <div id="p2-energy"></div>
-        <div id="ai-energy"></div>
-      </div>
+                <div class="player-section">
+                    <h3>AI Player</h3>
+                    <div class="health-display">Health: 1000</div>
+                    <div class="ai-controls">
+                        <label>
+                            <input type="checkbox" id="ai-enabled" checked> AI ON
+                        </label>
+                        <div class="difficulty-buttons">
+                            <button class="difficulty-button active">Easy</button>
+                            <button class="difficulty-button">Medium</button>
+                            <button class="difficulty-button">Hard</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <button id="start-game" class="play-button">Start Game</button>
+        </div>
     </div>
+
+    <div class="characters">
+        <h2 class="section-title">Choose Your Fighter</h2>
+        <div class="character-grid" id="characterGrid">
+            <!-- Characters will be loaded dynamically -->
+        </div>
+    </div>
+
     <canvas id="gameCanvas" width="800" height="600"></canvas>
-  </div>
+    <div id="debug"></div>
 
-  <div id="game-over" style="display: none;">
-    <h2>Game Over</h2>
-    <div id="winner-text"></div>
-    <button onclick="location.reload()">Play Again</button>
-  </div>
+    <div class="footer">
+        <p>&copy; 2024 Super Game V1. All rights reserved.</p>
+    </div>
 
-  <script src="script.js"></script>
+    <script>
+        // Initialize game state
+        window.GAME_STATE = {
+            players: {
+                player1: { 
+                    health: 1000, 
+                    character: null, 
+                    x: 100, 
+                    y: 400, 
+                    velocityX: 0, 
+                    velocityY: 0, 
+                    isJumping: false,
+                    isAttacking: false,
+                    attackCooldown: 0,
+                    attackDamage: 50,
+                    attackRange: 100,
+                    attackAnimation: 0,
+                    direction: 1
+                },
+                player2: { 
+                    health: 1000, 
+                    character: null, 
+                    x: 600, 
+                    y: 400, 
+                    velocityX: 0, 
+                    velocityY: 0, 
+                    isJumping: false,
+                    isAttacking: false,
+                    attackCooldown: 0,
+                    attackDamage: 50,
+                    attackRange: 100,
+                    attackAnimation: 0,
+                    direction: -1
+                },
+                ai: { 
+                    health: 1000, 
+                    character: null, 
+                    x: 600, 
+                    y: 400, 
+                    velocityX: 0, 
+                    velocityY: 0, 
+                    isJumping: false,
+                    isAttacking: false,
+                    attackCooldown: 0,
+                    attackDamage: 50,
+                    attackRange: 100,
+                    attackAnimation: 0,
+                    direction: -1
+                }
+            },
+            selectedMode: 'Classic',
+            aiEnabled: true,
+            aiDifficulty: 'Easy',
+            gameStarted: false,
+            selectedCharacters: [],
+            effects: []
+        };
+
+        // Character data
+        const characters = [
+            { name: 'Mario', image: 'images/mario.png' },
+            { name: 'Luigi', image: 'images/luigi.png' },
+            { name: 'Sonic', image: 'images/sonic.png' },
+            { name: 'Tails', image: 'images/Tails.png' },
+            { name: 'Toriel', image: 'images/toriel.png' },
+            { name: 'Sans', image: 'images/sans.png' },
+            { name: 'Kris', image: 'images/kris.png' },
+            { name: 'Spamton', image: 'images/spamton.png' },
+            { name: 'Susie', image: 'images/susie.png' },
+            { name: 'Noelle', image: 'images/noelle.png' },
+            { name: 'Jevil', image: 'images/jevil.png' },
+            { name: 'Berdly', image: 'images/berdly.png' }
+        ];
+
+        // Add mode selection functionality
+        document.querySelectorAll('.mode-button').forEach(button => {
+            button.addEventListener('click', () => {
+                document.querySelectorAll('.mode-button').forEach(b => b.classList.remove('active'));
+                button.classList.add('active');
+            });
+        });
+
+        // Add difficulty selection functionality
+        document.querySelectorAll('.difficulty-button').forEach(button => {
+            button.addEventListener('click', () => {
+                document.querySelectorAll('.difficulty-button').forEach(b => b.classList.remove('active'));
+                button.classList.add('active');
+            });
+        });
+
+        // Load characters
+        window.addEventListener('DOMContentLoaded', () => {
+            const grid = document.getElementById('characterGrid');
+            characters.forEach((char, index) => {
+                const card = document.createElement('div');
+                card.className = 'character-card';
+                card.style.opacity = '0';
+                card.style.transform = 'translateY(50px)';
+                card.innerHTML = `
+                    <img src="${char.image}" alt="${char.name}" onerror="this.src='images/placeholder.png'">
+                    <div class="character-name">${char.name}</div>
+                `;
+                
+                // Add click handler for character selection
+                card.addEventListener('click', () => {
+                    const allCards = document.querySelectorAll('.character-card');
+                    allCards.forEach(c => c.classList.remove('selected'));
+                    card.classList.add('selected');
+                    GAME_STATE.selectedCharacters = [char]; // Reset and add new selection
+                });
+                
+                grid.appendChild(card);
+
+                // Animate cards in sequence
+                setTimeout(() => {
+                    card.style.transition = 'all 0.5s ease';
+                    card.style.opacity = '1';
+                    card.style.transform = 'translateY(0)';
+                }, 100 * index);
+            });
+        });
+
+        // Initialize game when start button is clicked
+        document.getElementById('start-game').addEventListener('click', () => {
+            const selectedCharacters = document.querySelectorAll('.character-card.selected');
+            if (selectedCharacters.length === 0) {
+                alert('Please select at least one character!');
+                return;
+            }
+
+            // Add fade-out animation to elements
+            document.querySelector('.header').style.animation = 'fadeOut 0.5s forwards';
+            document.querySelector('.hero').style.animation = 'fadeOut 0.5s forwards';
+            document.querySelector('.characters').style.animation = 'fadeOut 0.5s forwards';
+            document.querySelector('.footer').style.animation = 'fadeOut 0.5s forwards';
+
+            setTimeout(() => {
+                // Hide elements after fade-out
+                document.querySelector('.header').style.display = 'none';
+                document.querySelector('.hero').style.display = 'none';
+                document.querySelector('.characters').style.display = 'none';
+                document.querySelector('.footer').style.display = 'none';
+
+                // Show and center the game canvas
+                const canvas = document.getElementById('gameCanvas');
+                canvas.style.display = 'block';
+                canvas.style.animation = 'fadeIn 0.5s forwards';
+
+                // Start the game
+                GAME_STATE.gameStarted = true;
+                GAME_STATE.selectedMode = document.querySelector('.mode-button.active').textContent;
+                GAME_STATE.aiEnabled = document.getElementById('ai-enabled').checked;
+                GAME_STATE.aiDifficulty = document.querySelector('.difficulty-button.active').textContent;
+                
+                initGame();
+            }, 500);
+        });
+
+        // Add fade animations
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes fadeOut {
+                from { opacity: 1; }
+                to { opacity: 0; }
+            }
+            @keyframes fadeIn {
+                from { opacity: 0; }
+                to { opacity: 1; }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+    <script src="script.js"></script>
 </body>
-</html>
+</html> 

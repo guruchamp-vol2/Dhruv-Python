@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Canvas Test</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #000;
+            color: white;
+            font-family: Arial, sans-serif;
+        }
+        
+        #container {
+            width: 800px;
+            height: 600px;
+            margin: 0 auto;
+            border: 2px solid red;
+            background: #4a0072;
+            position: relative;
+        }
+        
+        #gameCanvas {
+            width: 800px;
+            height: 600px;
+            display: block;
+            background: transparent;
+        }
+        
+        #debug {
+            position: fixed;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.8);
+            padding: 10px;
+            font-family: monospace;
+            max-width: 600px;
+            max-height: 300px;
+            overflow-y: auto;
+            color: #00ff00;
+            border: 1px solid #00ff00;
+        }
+        
+        button {
+            margin: 10px;
+            padding: 5px 10px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Preload spadeking image -->
+    <div style="display:none;">
+        <img id="spadeking-img" 
+             src="https://guruchamp-vol2.github.io/Dhruv-Python/game%20to%20be%20name/spadeking.png" 
+             alt="spadeking" 
+             crossorigin="anonymous" 
+             onload="log('Preloaded spadeking loaded', {src: this.src, complete: this.complete})"
+             onerror="log('Preloaded spadeking failed', {src: this.src, error: 'Failed to load'})"
+        >
+    </div>
+    
+    <div id="container">
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+    </div>
+    <div>
+        <button onclick="testBasicDrawing()">Test Basic Drawing</button>
+        <button onclick="testImageDrawing()">Test Spadeking Direct</button>
+        <button onclick="testPreloadedImage()">Test Preloaded Spadeking</button>
+        <button onclick="testAnimation()">Test Animation</button>
+        <button onclick="clearCanvas()">Clear Canvas</button>
+    </div>
+    <div id="debug">Debug output will appear here...</div>
+    
+    <script>
+        // Debug utility
+        function log(message, data = null) {
+            const debug = document.getElementById('debug');
+            const text = data ? `${message}\n${JSON.stringify(data, null, 2)}` : message;
+            debug.innerHTML = `<pre>${text}\n\n${debug.innerHTML}</pre>`;
+            console.log(message, data);
+        }
+        
+        // Get canvas context
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d', {
+            alpha: false,
+            desynchronized: false,
+            preserveDrawingBuffer: true
+        });
+        
+        // Test basic shape drawing
+        function testBasicDrawing() {
+            log('Testing basic drawing...');
+            
+            try {
+                // Clear canvas
+                ctx.fillStyle = '#4a0072';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                // Draw shapes
+                ctx.fillStyle = 'red';
+                ctx.fillRect(100, 100, 100, 100);
+                
+                ctx.fillStyle = 'blue';
+                ctx.fillRect(300, 100, 100, 100);
+                
+                ctx.fillStyle = 'green';
+                ctx.fillRect(500, 100, 100, 100);
+                
+                // Draw text
+                ctx.fillStyle = 'white';
+                ctx.font = '30px Arial';
+                ctx.fillText('Basic Drawing Test', 300, 50);
+                
+                // Verify drawing
+                const pixels = ctx.getImageData(150, 150, 1, 1).data;
+                log('Basic drawing complete', {
+                    redPixel: Array.from(pixels)
+                });
+            } catch (error) {
+                log('Basic drawing failed', error);
+            }
+        }
+        
+        // Test image drawing
+        function testImageDrawing() {
+            log('Testing image drawing...');
+            
+            // Test with spadeking specifically
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            
+            // Add load event listener before setting src
+            img.addEventListener('load', function() {
+                log('Image loaded successfully', {
+                    naturalWidth: img.naturalWidth,
+                    naturalHeight: img.naturalHeight,
+                    currentSrc: img.currentSrc,
+                    complete: img.complete,
+                    crossOrigin: img.crossOrigin
+                });
+                
+                try {
+                    // Save canvas state
+                    ctx.save();
+                    
+                    // Clear a region for the image
+                    ctx.fillStyle = 'white';
+                    ctx.fillRect(350, 250, 100, 100);
+                    
+                    // Draw image with explicit dimensions
+                    ctx.drawImage(img, 350, 250, 100, 100);
+                    
+                    // Read back pixels to verify drawing
+                    const pixels = ctx.getImageData(400, 300, 1, 1).data;
+                    
+                    // Draw a border around where the image should be
+                    ctx.strokeStyle = 'red';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(350, 250, 100, 100);
+                    
+                    // Restore canvas state
+                    ctx.restore();
+                    
+                    log('Image drawing complete', {
+                        drawnPixels: Array.from(pixels),
+                        drawLocation: {x: 350, y: 250, w: 100, h: 100}
+                    });
+                } catch (error) {
+                    log('Image drawing failed', {
+                        error: error.message,
+                        stack: error.stack
+                    });
+                }
+            });
+            
+            // Add error handler
+            img.addEventListener('error', function(error) {
+                log('Image loading failed', {
+                    error: error.message,
+                    src: img.src,
+                    time: new Date().toISOString()
+                });
+            });
+            
+            // Test both URLs
+            const urls = [
+                'https://guruchamp-vol2.github.io/Dhruv-Python/game%20to%20be%20name/spadeking.png',
+                'spadeking.png'
+            ];
+            
+            function tryNextUrl(index = 0) {
+                if (index >= urls.length) {
+                    log('All URLs failed');
+                    return;
+                }
+                
+                log(`Trying URL ${index + 1}/${urls.length}`, {
+                    url: urls[index]
+                });
+                
+                img.src = urls[index];
+                
+                // If this URL fails, try the next one after a short delay
+                img.onerror = () => {
+                    setTimeout(() => tryNextUrl(index + 1), 1000);
+                };
+            }
+            
+            tryNextUrl();
+        }
+        
+        // Add image preload test
+        function testPreloadedImage() {
+            log('Testing preloaded spadeking image...');
+            
+            // Try to get the preloaded image from the main game
+            const preloadedImg = document.getElementById('spadeking-img');
+            if (preloadedImg) {
+                log('Found preloaded image', {
+                    complete: preloadedImg.complete,
+                    naturalWidth: preloadedImg.naturalWidth,
+                    naturalHeight: preloadedImg.naturalHeight,
+                    currentSrc: preloadedImg.currentSrc
+                });
+                
+                try {
+                    // Draw the preloaded image
+                    ctx.drawImage(preloadedImg, 100, 250, 100, 100);
+                    
+                    // Add a border to show where it should be
+                    ctx.strokeStyle = 'yellow';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(100, 250, 100, 100);
+                    
+                    log('Drew preloaded image');
+                } catch (error) {
+                    log('Failed to draw preloaded image', {
+                        error: error.message
+                    });
+                }
+            } else {
+                log('No preloaded image found');
+            }
+        }
+        
+        // Test animation
+        function testAnimation() {
+            log('Testing animation...');
+            
+            let x = 0;
+            let frame = 0;
+            
+            function animate() {
+                // Clear previous frame
+                ctx.fillStyle = '#4a0072';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                // Draw moving rectangle
+                ctx.fillStyle = 'yellow';
+                ctx.fillRect(x, 250, 50, 50);
+                
+                // Update position
+                x = (x + 5) % canvas.width;
+                frame++;
+                
+                if (frame < 120) { // Run for 2 seconds at 60fps
+                    requestAnimationFrame(animate);
+                } else {
+                    log('Animation complete', {
+                        frames: frame
+                    });
+                }
+            }
+            
+            animate();
+        }
+        
+        // Clear canvas
+        function clearCanvas() {
+            ctx.fillStyle = '#4a0072';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            log('Canvas cleared');
+        }
+        
+        // Initial test
+        window.addEventListener('load', () => {
+            log('Canvas initialized', {
+                width: canvas.width,
+                height: canvas.height,
+                context: ctx ? 'available' : 'failed'
+            });
+            testBasicDrawing();
+        });
+    </script>
+</body>
+</html> 

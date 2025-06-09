@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Image Loading Test</title>
+    <style>
+        body {
+            background: #333;
+            color: white;
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+        .test-image {
+            border: 2px solid white;
+            margin: 10px;
+            max-width: 200px;
+            max-height: 200px;
+        }
+        .status {
+            margin: 10px;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .success {
+            background: #4CAF50;
+        }
+        .error {
+            background: #f44336;
+        }
+    </style>
+</head>
+<body>
+    <h1>Image Loading Test</h1>
+    <div id="status"></div>
+    
+    <h2>Direct Image Test</h2>
+    <img src="https://guruchamp-vol2.github.io/Dhruv-Python/mario.png" 
+         class="test-image" 
+         alt="Mario Test"
+         crossorigin="anonymous"
+         onload="reportSuccess(this)"
+         onerror="reportError(this)">
+    
+    <h2>Canvas Test</h2>
+    <canvas id="testCanvas" width="400" height="400" style="border: 2px solid white;"></canvas>
+    
+    <script>
+        function reportSuccess(img) {
+            const status = document.getElementById('status');
+            status.innerHTML += `
+                <div class="status success">
+                    Successfully loaded: ${img.src}<br>
+                    Size: ${img.naturalWidth} x ${img.naturalHeight}
+                </div>
+            `;
+        }
+        
+        function reportError(img) {
+            const status = document.getElementById('status');
+            status.innerHTML += `
+                <div class="status error">
+                    Failed to load: ${img.src}
+                </div>
+            `;
+        }
+        
+        // Canvas test
+        window.onload = function() {
+            const canvas = document.getElementById('testCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Draw background
+            ctx.fillStyle = '#000033';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Load and draw image
+            const testImage = new Image();
+            testImage.crossOrigin = "anonymous";
+            testImage.onload = function() {
+                ctx.drawImage(testImage, 50, 50, 100, 100);
+                console.log('Drew image to canvas');
+            };
+            testImage.onerror = function(error) {
+                console.error('Failed to load image for canvas:', error);
+                // Draw error indicator
+                ctx.fillStyle = 'red';
+                ctx.fillRect(50, 50, 100, 100);
+            };
+            testImage.src = 'https://guruchamp-vol2.github.io/Dhruv-Python/mario.png';
+            
+            // Draw some shapes to verify canvas is working
+            ctx.fillStyle = 'red';
+            ctx.fillRect(200, 50, 50, 50);
+            
+            ctx.fillStyle = 'green';
+            ctx.fillRect(200, 150, 50, 50);
+            
+            ctx.fillStyle = 'blue';
+            ctx.fillRect(200, 250, 50, 50);
+        };
+    </script>
+</body>
+</html> 
