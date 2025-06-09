@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<<<<<<< Updated upstream
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=800, initial-scale=1.0"/>
   <title>2D Fighting Game</title>
@@ -126,5 +127,66 @@
   </div>
 
   <script src="script.js"></script>
+=======
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game To Be Name</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="game-container">
+        <div class="menu-screen" id="menuScreen">
+            <h1>Game To Be Name</h1>
+            <div class="game-modes">
+                <button class="mode-btn" data-mode="classic">Classic</button>
+                <button class="mode-btn" data-mode="classic-coop">Classic Co-op</button>
+                <button class="mode-btn" data-mode="modern">Modern</button>
+                <button class="mode-btn" data-mode="modern-coop">Modern Co-op</button>
+                <button class="mode-btn" data-mode="online-classic">Online Classic (Beta)</button>
+                <button class="mode-btn" data-mode="online-modern">Online Modern (Beta)</button>
+            </div>
+
+            <div class="player-info">
+                <div class="player">
+                    <h2>Player 1</h2>
+                    <div class="health">Health: 1000</div>
+                </div>
+                
+                <div class="player">
+                    <h2>Player 2</h2>
+                    <div class="health">Health: 1000</div>
+                </div>
+
+                <div class="ai-player">
+                    <h2>AI Player</h2>
+                    <div class="health">Health: 1000</div>
+                    <div class="ai-controls">
+                        <label>
+                            <input type="checkbox" id="aiEnabled" checked>
+                            AI ON
+                        </label>
+                        <div class="difficulty">
+                            <button class="difficulty-btn active" data-difficulty="easy">Easy</button>
+                            <button class="difficulty-btn" data-difficulty="medium">Medium</button>
+                            <button class="difficulty-btn" data-difficulty="hard">Hard</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <button id="startGame">Start Game</button>
+        </div>
+
+        <div class="character-select" id="characterSelect">
+            <h2>Choose Your Fighter</h2>
+            <div class="character-grid" id="characterGrid"></div>
+        </div>
+
+        <canvas id="gameCanvas"></canvas>
+        <div id="debug"></div>
+    </div>
+
+    <script src="script.js"></script>
+>>>>>>> Stashed changes
 </body>
 </html>
